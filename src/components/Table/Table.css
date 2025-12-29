@@ -1,0 +1,80 @@
+.table {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  margin-top: 30px;
+  overflow: auto;
+}
+.table__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.table__block {
+  background: #fff;
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+}
+
+.table__title {
+  margin-bottom: 12px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #222;
+}
+
+.table__table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table__head {
+  background: #f5f6f8;
+}
+
+.table__row {
+  transition: background 0.2s ease;
+}
+
+.table__row:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.table__th {
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  border-bottom: 1px solid #e5e5e5;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.table__td {
+  padding: 10px 12px;
+  font-size: 14px;
+  border-bottom: 1px solid #eee;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.table__sales-row {
+  display: flex;
+  gap: 24px;
+  width: 100%;
+}
+
+.table__half {
+  flex: 1;
+  min-width: 0;
+}
+
+
+@media (max-width: 900px) {
+  .table__grid {
+    grid-template-columns: 1fr;
+  }
+}

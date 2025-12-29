@@ -1,0 +1,16 @@
+.filters__button {
+    padding: 10px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.button--data {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+.button--data:hover {
+    transform: scale(1.01);
+}

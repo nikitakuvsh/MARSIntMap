@@ -1,0 +1,21 @@
+.theme-color {
+  position: absolute;
+  top: 10px;
+  left: 7px;
+  font-size: 24px;
+  background-color: white;
+  padding: 5px;
+  border-radius: 5px;
+  box-shadow: 0 0 5px rgba(0,0,0,0.3);
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+  z-index: 1000;
+  transition: all 0.15s ease-in-out;
+  border: none;
+}
+
+.theme-color:hover {
+  background-color: #f0f0f0;
+}
