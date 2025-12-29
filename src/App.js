@@ -9,10 +9,10 @@ function App() {
   const [selectedRegionView, setSelectedRegionView] = useState([]);
   const [excelData, setExcelData] = useState([]);
   const [filters, setFilters] = useState({
-      region: "",
-      hsr: "",
-      manager: "",
-      distributor: ""
+      region: [],
+      hsr: [],
+      manager: [],
+      distributor: []
   });
   const [tableValues, setTableValues] = useState('');
 

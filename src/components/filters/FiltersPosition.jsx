@@ -1,91 +1,91 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 
-export default function FiltersPosition({ excelData = [], filters, setFilters, setSelectedRegionView }) {
-    const [showDistrictFilter, setShowDistrictFilter] = useState(false);
+export default function FiltersPosition({
+    excelData = [],
+    filters,
+    setFilters,
+    setSelectedRegionView
+}) {
     const [districtsForHSR, setDistrictsForHSR] = useState([]);
 
-    // Уникальные HSR (Region / HSR)
     const hsrList = Array.from(
-        new Set(excelData.map((row) => row["Region / HSR"]).filter(Boolean))
+        new Set(excelData.map(row => row["Region / HSR"]).filter(Boolean))
     );
 
-    // Слежение за выбором HSR
+    // обновляем список District при смене HSR
     useEffect(() => {
-        if (!filters.region) {
-            setShowDistrictFilter(false);
+        if (!filters.region?.length) {
             setDistrictsForHSR([]);
+            setSelectedRegionView([]);
             return;
         }
 
-        // Получаем все District для выбранного HSR
         const districts = excelData
-            .filter((row) => row["Region / HSR"] === filters.region)
-            .map((row) => row["District"]);
+            .filter(row => filters.region.includes(row["Region / HSR"]))
+            .map(row => row["District"]);
 
-        const uniqueDistricts = Array.from(new Set(districts));
-        console.log(uniqueDistricts);
+        const unique = [...new Set(districts)];
+        setDistrictsForHSR(unique);
 
-        if (uniqueDistricts.length === 1) {
-            console.log("Выбран HSR с уникальным District:", uniqueDistricts[0], uniqueDistricts);
-            setSelectedRegionView(uniqueDistricts[0]);
-            setShowDistrictFilter(false);
-            setDistrictsForHSR([]);
-            // Сохраняем выбранный район автоматически
-            setFilters({ ...filters, district: uniqueDistricts[0] });
-        } else {
-            setShowDistrictFilter(true);
-            setSelectedRegionView("");
-            setDistrictsForHSR(uniqueDistricts);
-            // Если в filters.district что-то было, сбросим
-            setFilters({ ...filters, district: "" });
-        }
-    }, [filters.region, excelData]);
+        // если выбранные district больше не существуют — чистим
+        const validSelected = filters.district?.filter(d => unique.includes(d)) || [];
+        setFilters({ ...filters, district: validSelected });
+        setSelectedRegionView(validSelected);
+
+    }, [filters.region]);
+
+    const toggleHSR = (value) => {
+        const updated = filters.region.includes(value)
+            ? filters.region.filter(v => v !== value)
+            : [...filters.region, value];
+
+        setFilters({ ...filters, region: updated });
+    };
+
+    const toggleDistrict = (value) => {
+        const updated = filters.district.includes(value)
+            ? filters.district.filter(v => v !== value)
+            : [...filters.district, value];
+
+        setFilters({ ...filters, district: updated });
+        setSelectedRegionView(updated);
+    };
 
     return (
         <div className="filters__group">
-            <label className="filters__label">Выбор HSR</label>
-            <select
-                className="filters__select"
-                value={filters.region}
-                onChange={(e) => setFilters({ ...filters, region: e.target.value })}
-            >
-                <option value="">-.-</option>
-                {hsrList.map((hsr) => (
-                    <option key={hsr} value={hsr}>
+
+            <label className="filters__label">HSR</label>
+            <div className="checkbox-list">
+                {hsrList.map(hsr => (
+                    <label key={hsr} className="checkbox-item">
+                        <input
+                            type="checkbox"
+                            checked={filters.region.includes(hsr)}
+                            onChange={() => toggleHSR(hsr)}
+                        />
                         {hsr}
-                    </option>
+                    </label>
                 ))}
-            </select>
+            </div>
 
-            {showDistrictFilter && (
-                <div style={{ marginTop: "10px" }}>
-                    <label className="filters__label">Выбор District</label>
-                    <select
-                        className="filters__select"
-                        value={filters.district || ""}
-                        onChange={(e) => {
-                            const val = e.target.value;
-                            setFilters({ ...filters, district: val });
-
-                            if (val === "Total") {
-                                // Подсвечиваем все District текущего HSR
-                                setSelectedRegionView([...districtsForHSR]);
-                            } else {
-                                setSelectedRegionView(val); // один выбранный район
-                            }
-                        }}
-                    >
-                        <option value="">-.-</option>
-                        <option value="Total">Total</option>
-                        {districtsForHSR.map((dist) => (
-                            <option key={dist} value={dist}>
+            {districtsForHSR.length > 0 && (
+                <>
+                    <label className="filters__label">District</label>
+                    <div className="checkbox-list">
+                        {districtsForHSR.map(dist => (
+                            <label key={dist} className="checkbox-item">
+                                <input
+                                    type="checkbox"
+                                    checked={filters.district.includes(dist)}
+                                    onChange={() => toggleDistrict(dist)}
+                                />
                                 {dist}
-                            </option>
+                            </label>
                         ))}
-                    </select>
-
-                </div>
+                    </div>
+                </>
             )}
+
         </div>
     );
 }

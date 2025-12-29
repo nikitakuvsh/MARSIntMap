@@ -1,159 +1,155 @@
 import React, { useEffect, useState } from "react";
 
 export default function FiltersManagers({ excelData = [], filter, setFilters }) {
-  const [managersForHSR, setManagersForHSR] = useState([]);
-  const [territoriesForManager, setTerritoriesForManager] = useState([]);
-  const [distributorsForTerritory, setDistributorsForTerritory] = useState([]);
+    const [managersForHSR, setManagersForHSR] = useState([]);
+    const [territoriesForManager, setTerritoriesForManager] = useState([]);
+    const [distributorsForTerritory, setDistributorsForTerritory] = useState([]);
+    const safeFilter = {
+    region: filter.region || [],
+    manager: filter.manager || [],
+    territory: filter.territory || [],
+    distributor: filter.distributor || []
+    };
+    
+    
 
-  // ===== MANAGER =====
-  useEffect(() => {
-    if (!filter.region) {
-      setManagersForHSR([]);
-      setTerritoriesForManager([]);
-      setDistributorsForTerritory([]);
-      setFilters({ ...filter, manager: "", territory: "", distributor: "" });
-      return;
-    }
 
-    const managers = [
-      ...new Set(
-        excelData
-          .filter(row => row["Region / HSR"] === filter.region)
-          .map(row => row["Manager"])
-          .filter(Boolean)
-      ),
-    ];
+    // ===== MANAGERS =====
+    useEffect(() => {
+        if (!safeFilter.region.length) {
+            setManagersForHSR([]);
+            setTerritoriesForManager([]);
+            setDistributorsForTerritory([]);
+            setFilters({ ...filter, manager: [], territory: [], distributor: [] });
+            return;
+        }
 
-    setManagersForHSR(managers);
+        const managers = [
+            ...new Set(
+                excelData
+                    .filter(row => filter.region.includes(row["Region / HSR"]))
+                    .map(row => row["Manager"])
+                    .filter(Boolean)
+            ),
+        ];
 
-    if (managers.length === 1) {
-      setFilters(f => ({ ...f, manager: managers[0] }));
-    }
-  }, [filter.region, excelData]);
+        setManagersForHSR(managers);
 
-  // ===== TERRITORY =====
-  useEffect(() => {
-    if (!filter.manager) return;
+        setFilters(f => ({
+            ...f,
+            manager: f.manager.filter(m => managers.includes(m)),
+        }));
+    }, [filter.region]);
 
-    const isAllManagers = filter.manager === "Total";
+    // ===== TERRITORY =====
+    useEffect(() => {
+        if (!safeFilter.manager.length) {
+            setTerritoriesForManager([]);
+            setDistributorsForTerritory([]);
+            return;
+        }
 
-    const territories = [
-      ...new Set(
-        excelData
-          .filter(row =>
-            isAllManagers
-              ? row["Region / HSR"] === filter.region
-              : row["Manager"] === filter.manager
-          )
-          .map(row => row["Territory"])
-          .filter(Boolean)
-      ),
-    ];
+        const territories = [
+            ...new Set(
+                excelData
+                    .filter(row => filter.manager.includes(row["Manager"]))
+                    .map(row => row["Territory"])
+                    .filter(Boolean)
+            ),
+        ];
 
-    setTerritoriesForManager(territories);
+        setTerritoriesForManager(territories);
 
-    if (territories.length === 1) {
-      setFilters(f => ({ ...f, territory: territories[0] }));
-    }
-  }, [filter.manager, filter.region, excelData]);
+        setFilters(f => ({
+            ...f,
+            territory: f.territory.filter(t => territories.includes(t)),
+        }));
+    }, [filter.manager]);
 
-  // ===== DISTRIBUTOR =====
-  useEffect(() => {
-    if (!filter.territory) return;
+    // ===== DISTRIBUTOR =====
+    useEffect(() => {
+        if (!safeFilter.territory.length) {
+            setDistributorsForTerritory([]);
+            return;
+        }
 
-    const isAllManagers = filter.manager === "Total";
-    const isAllTerritories = filter.territory === "Total";
+        const distributors = [
+            ...new Set(
+                excelData
+                    .filter(row => filter.territory.includes(row["Territory"]))
+                    .map(row => row["Distributor"])
+                    .filter(Boolean)
+            ),
+        ];
 
-    const distributors = [
-      ...new Set(
-        excelData
-          .filter(row => {
-            if (!isAllManagers && row["Manager"] !== filter.manager) return false;
-            if (!isAllTerritories && row["Territory"] !== filter.territory) return false;
-            return true;
-          })
-          .map(row => row["Distributor"])
-          .filter(Boolean)
-      ),
-    ];
+        setDistributorsForTerritory(distributors);
 
-    setDistributorsForTerritory(distributors);
+        setFilters(f => ({
+            ...f,
+            distributor: f.distributor.filter(d => distributors.includes(d)),
+        }));
+    }, [filter.territory]);
 
-    if (distributors.length === 1) {
-      setFilters(f => ({ ...f, distributor: distributors[0] }));
-    }
-  }, [filter.manager, filter.territory, excelData]);
+    const toggleValue = (key, value) => {
+        const updated = filter[key].includes(value)
+            ? filter[key].filter(v => v !== value)
+            : [...filter[key], value];
 
-  return (
-    <>
-      {/* MANAGER */}
-      {managersForHSR.length > 0 && (
-        <div className="filters__group">
-          <label className="filters__label">Выбор Manager</label>
-          <select
-            className="filters__select"
-            value={filter.manager || ""}
-            onChange={(e) =>
-              setFilters({
-                ...filter,
-                manager: e.target.value,
-                territory: "",
-                distributor: "",
-              })
-            }
-          >
-            <option value="">-.-</option>
-            {managersForHSR.length > 1 && <option value="Total">Total</option>}
-            {managersForHSR.map(m => (
-              <option key={m} value={m}>{m}</option>
-            ))}
-          </select>
-        </div>
-      )}
+        setFilters({ ...filter, [key]: updated });
+    };
 
-      {/* TERRITORY */}
-      {territoriesForManager.length > 0 && (
-        <div className="filters__group">
-          <label className="filters__label">Выбор Territory</label>
-          <select
-            className="filters__select"
-            value={filter.territory || ""}
-            onChange={(e) =>
-              setFilters({
-                ...filter,
-                territory: e.target.value,
-                distributor: "",
-              })
-            }
-          >
-            <option value="">-.-</option>
-            {territoriesForManager.length > 1 && <option value="Total">Total</option>}
-            {territoriesForManager.map(t => (
-              <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
-        </div>
-      )}
+    return (
+        <>
+            {/* MANAGER */}
+            <div className="filters__group">
+                <label className="filters__label">Manager</label>
+                <div className="checkbox-list">
+                    {managersForHSR.map(m => (
+                        <label key={m} className="checkbox-item">
+                            <input
+                                type="checkbox"
+                                checked={filter.manager.includes(m)}
+                                onChange={() => toggleValue("manager", m)}
+                            />
+                            {m}
+                        </label>
+                    ))}
+                </div>
+            </div>
 
-      {/* DISTRIBUTOR */}
-      {distributorsForTerritory.length > 0 && (
-        <div className="filters__group">
-          <label className="filters__label">Выбор Distributor</label>
-          <select
-            className="filters__select"
-            value={filter.distributor || ""}
-            onChange={(e) =>
-              setFilters({ ...filter, distributor: e.target.value })
-            }
-          >
-            <option value="">-.-</option>
-            {distributorsForTerritory.length > 1 && <option value="Total">Total</option>}
-            {distributorsForTerritory.map(d => (
-              <option key={d} value={d}>{d}</option>
-            ))}
-          </select>
-        </div>
-      )}
-    </>
-  );
+            {/* TERRITORY */}
+            <div className="filters__group">
+                <label className="filters__label">Territory</label>
+                <div className="checkbox-list">
+                    {territoriesForManager.map(t => (
+                        <label key={t} className="checkbox-item">
+                            <input
+                                type="checkbox"
+                                checked={filter.territory.includes(t)}
+                                onChange={() => toggleValue("territory", t)}
+                            />
+                            {t}
+                        </label>
+                    ))}
+                </div>
+            </div>
+
+            {/* DISTRIBUTOR */}
+            <div className="filters__group">
+                <label className="filters__label">Distributor</label>
+                <div className="checkbox-list">
+                    {distributorsForTerritory.map(d => (
+                        <label key={d} className="checkbox-item">
+                            <input
+                                type="checkbox"
+                                checked={filter.distributor.includes(d)}
+                                onChange={() => toggleValue("distributor", d)}
+                            />
+                            {d}
+                        </label>
+                    ))}
+                </div>
+            </div>
+        </>
+    );
 }

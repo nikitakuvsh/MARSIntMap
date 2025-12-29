@@ -7,7 +7,7 @@ export default function Map({ selectedRegion, setSelectedRegion, selectedRegionV
     const mapRef = useRef(null);
     const regionsRef = useRef({});
     const redColor = "rgba(255, 0, 0, 0.82)";
-    const greenColor = "rgba(0, 255, 0, 0.82)";
+    const greenColor = "rgba(6, 255, 6, 0.8)";
     const yellowColor = "rgba(242, 231, 0, 0.82)";
     const [backgroundColor, setBackgroundColor] = useState(greenColor);
     const [activeRegions, setActiveRegions] = useState([]);
