@@ -1,9 +1,11 @@
 import React, { useState } from "react";
 import * as XLSX from "xlsx";
+import ModalMessage from "../ModalMessage/ModalMessage";
 import './ButtonDataInput.css';
 
 export default function ButtonDataInput({ onDataLoaded }) {
   const [fileName, setFileName] = useState("");
+  const [showSuccesMessage, setShowSuccesMessage] = useState(false);
 
   const handleFile = (e) => {
     const file = e.target.files[0];
@@ -25,6 +27,7 @@ export default function ButtonDataInput({ onDataLoaded }) {
       if (onDataLoaded) onDataLoaded(jsonData);
     };
     reader.readAsArrayBuffer(file);
+    setShowSuccesMessage(true);
   };
 
   return (
@@ -33,6 +36,11 @@ export default function ButtonDataInput({ onDataLoaded }) {
         {fileName || "Выбрать Excel файл"}
         <input type="file" accept=".xlsx, .xls" onChange={handleFile} style={{ display: "none" }}/>
       </label>
+
+      {showSuccesMessage && (
+        <ModalMessage message={'Excel файл успешно прочитан!'} isError={false} onClose={() => setShowSuccesMessage(false)} messageError={""} />
+       )}
     </div>
+
   );
 }
