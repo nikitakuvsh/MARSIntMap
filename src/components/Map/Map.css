@@ -1,6 +1,6 @@
 .map {
   width: 70%;
-  height: 900px;
+  height: 100vh;
   border: 4px solid black;
   position: relative;
   box-shadow: 0 0 10px rgba(0,0,0,0.3);

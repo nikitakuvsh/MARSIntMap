@@ -6,10 +6,16 @@ import './ButtonDataInput.css';
 export default function ButtonDataInput({ onDataLoaded }) {
   const [fileName, setFileName] = useState("");
   const [showSuccesMessage, setShowSuccesMessage] = useState(false);
+  const [isError, setIsError] = useState(false);
+  const [modalMessage, setModalMessage] = useState('');
+  
 
   const handleFile = (e) => {
     const file = e.target.files[0];
-    if (!file) return;
+    if (!file) {
+        setIsError(true);
+        setModalMessage('Ошибка при чтении файла');
+    };
 
     setFileName(file.name);
 
@@ -28,6 +34,8 @@ export default function ButtonDataInput({ onDataLoaded }) {
     };
     reader.readAsArrayBuffer(file);
     setShowSuccesMessage(true);
+    setIsError(false);
+    setModalMessage(`Файл ${file.name} успешно прочитан!`);
   };
 
   return (
@@ -38,9 +46,8 @@ export default function ButtonDataInput({ onDataLoaded }) {
       </label>
 
       {showSuccesMessage && (
-        <ModalMessage message={'Excel файл успешно прочитан!'} isError={false} onClose={() => setShowSuccesMessage(false)} messageError={""} />
+        <ModalMessage message={modalMessage} isError={isError} onClose={() => setShowSuccesMessage(false)} messageError={""} />
        )}
     </div>
-
   );
 }

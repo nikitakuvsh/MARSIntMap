@@ -50,7 +50,7 @@ export default function Map({ selectedRegion, setSelectedRegion, selectedRegionV
                     polygon.events
                         .add("mouseenter", () => {
                             polygon.options.set({
-                                strokeColor: "#000",
+                                strokeColor: "#000",    
                                 strokeWidth: 3,
                             });
                         })

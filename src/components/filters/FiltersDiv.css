@@ -1,10 +1,35 @@
 .filters {
-  width: 27%;
+  width: 28%;
   display: flex;
   flex-direction: column;
   gap: 15px;
   margin-top: 20px;
+  height: 100vh;
+  overflow-y: auto;
+  padding-bottom: 5vh;
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: #5c5c5c transparent;
 }
+
+/* Chrome / Edge / Safari */
+.filters::-webkit-scrollbar {
+  width: 8px;
+}
+
+.filters::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.filters::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #555, #888);
+  border-radius: 10px;
+  transition: background 0.3s ease;
+}
+
+.filters::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #777, #aaa);
+}
+
 
 .filters__group {
   display: flex;
