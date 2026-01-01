@@ -5,13 +5,13 @@ export default function FiltersManagers({ excelData = [], filter, setFilters }) 
     const [territoriesForManager, setTerritoriesForManager] = useState([]);
     const [distributorsForTerritory, setDistributorsForTerritory] = useState([]);
     const safeFilter = {
-    region: filter.region || [],
-    manager: filter.manager || [],
-    territory: filter.territory || [],
-    distributor: filter.distributor || []
+        region: filter.region || [],
+        manager: filter.manager || [],
+        territory: filter.territory || [],
+        distributor: filter.distributor || []
     };
-    
-    
+
+
 
 
     // ===== MANAGERS =====

@@ -6,6 +6,7 @@
   margin-top: 30px;
   overflow: auto;
 }
+
 .table__grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -71,7 +72,6 @@
   flex: 1;
   min-width: 0;
 }
-
 
 @media (max-width: 900px) {
   .table__grid {

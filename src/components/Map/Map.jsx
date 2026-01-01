@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import ButtonThemeColor from "../ButtonThemeColor/ButtonThemeColor";
 import regionsByArea from "./RegionsData";
+import ModalMessage from "../ModalMessage/ModalMessage";
 import "./Map.css";
 
 export default function Map({ selectedRegion, setSelectedRegion, selectedRegionView = [], setSelectedRegionView, excelData = [], mapDataColumn = null, mapDataColumnValues = [] }) {
@@ -12,10 +13,14 @@ export default function Map({ selectedRegion, setSelectedRegion, selectedRegionV
     const [backgroundColor, setBackgroundColor] = useState(greenColor);
     const [activeRegions, setActiveRegions] = useState([]);
     const activeRegionsRef = useRef([]);
+    const [modalMessageVisible, setModalMessageVisible] = useState(false);
     activeRegionsRef.current = activeRegions; // реф всегда хранит актуальный массив
 
     useEffect(() => {
-        if (!window.ymaps || mapRef.current?._map) return;
+        if (!window.ymaps || mapRef.current?._map) {
+            setTimeout(() => setModalMessageVisible(true), 5000);
+            return;
+        };
 
         window.ymaps.ready(() => {
             const map = new window.ymaps.Map(mapRef.current, {
@@ -200,6 +205,9 @@ export default function Map({ selectedRegion, setSelectedRegion, selectedRegionV
     return (
         <div className="map" id="map" ref={mapRef}>
             <ButtonThemeColor />
+            {modalMessageVisible && (
+                <ModalMessage message={'Ошибка при загрузке Карты. Проблема с интернетом?'} isError={true} onClose={() => setModalMessageVisible(false)} />
+            )}
         </div>
     );
 }

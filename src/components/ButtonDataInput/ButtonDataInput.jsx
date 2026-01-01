@@ -39,8 +39,8 @@ export default function ButtonDataInput({ onDataLoaded }) {
   };
 
   return (
-    <div>
-      <label className="filters__button button--data">
+    <div className="filters__button">
+      <label className="button--data">
         {fileName || "Выбрать Excel файл"}
         <input type="file" accept=".xlsx, .xls" onChange={handleFile} style={{ display: "none" }}/>
       </label>

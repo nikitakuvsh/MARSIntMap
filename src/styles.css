@@ -59,6 +59,17 @@ body.dark-theme .table__th {
     background-color: #2f2f2f !important;
 }
 
+body.dark-theme .ymaps-2-1-79-listbox__button,
+body.dark-theme .ymaps-2-1-79-listbox__button-icon {
+    background-color: #444444 !important;
+    color: #f0f0f0 !important;
+}
+
+body.dark-theme .ymaps-2-1-79-listbox__button-arrow {
+    background-color: transparent;
+    color: #f0f0f0;
+}
+
 body.dark-theme li:hover,
 body.dark-theme li.active {
     background-color: #555555 !important;
@@ -71,4 +82,9 @@ select, button {
 .page__content {
   display: flex;
   gap: 20px
+}
+
+.pointer--none {
+    pointer-events: none !important;
+    cursor: not-allowed;
 }
