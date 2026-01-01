@@ -49,10 +49,15 @@ body.dark-theme tbody,
 body.dark-theme td,
 body.dark-theme .table__block,
 body.dark-theme .table__title,
-body.dark-theme .table {
+body.dark-theme .table,
+body.dark-theme .checkbox-list {
     background-color: #444444 !important;
     color: #f0f0f0 !important;
     border-color: #f0f0f0 !important;
+}
+
+body.dark-theme .filters__label {
+    color: #f0f0f0 !important;
 }
 
 body.dark-theme .table__th {
