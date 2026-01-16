@@ -1,0 +1,75 @@
+.modal {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    transform: translateX(100%);
+    animation: slideIn 0.5s forwards;
+    min-width: 14%;
+    text-align: center;
+    overflow: hidden;
+    display: block;
+    margin-bottom: 15px;
+    border-radius: 8px;
+}
+
+.modal:nth-child(2) {
+    top: 90px;
+}
+
+.modal:nth-child(3) {
+    top: 160px;
+}
+
+.modal-content {
+    color: white;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    max-width: 300px;
+    font-size: 16px;
+    position: relative;
+}
+
+.modal-content .close {
+    position: absolute;
+    top: 5px;
+    right: 10px;
+    font-size: 20px;
+    cursor: pointer;
+    color: white;
+}
+
+.modal--success {
+    background-color: #4CAF50;
+}
+
+.modal--error {
+    background-color: #FF6B6B;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+    }
+
+    to {
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateX(0);
+    }
+
+    to {
+        transform: translateX(100%);
+        right: 0;
+    }
+}
+
+.modal-close {
+    animation: slideOut 0.5s forwards;
+    overflow: hidden;
+}

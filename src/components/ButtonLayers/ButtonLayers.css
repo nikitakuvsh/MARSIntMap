@@ -1,0 +1,58 @@
+.button-layers {
+    position: absolute;
+    bottom: 30px;
+    left: 10px;
+    z-index: 1000;
+
+    padding: 6px;
+    border-radius: 12px;
+    border: 1px solid #e0e0e0;
+
+    background: #ffffff;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.button-layers:hover {
+    transform: scale(1.05);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+}
+
+.button-layers__icon {
+    width: 42px;
+    height: 42px;
+    object-fit: contain;
+    display: block;
+}
+
+.layers__list {
+    position: absolute;
+    bottom: 100px;
+    left: 10px;
+    z-index: 1000;
+
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+
+    padding: 8px;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.16);
+}
+
+.layers__li {
+    padding: 6px 10px;
+    border-radius: 8px;
+
+    font-size: 14px;
+    cursor: pointer;
+
+    transition: background 0.15s ease;
+}
+
+.layers__li:hover {
+    background: rgba(0, 0, 0, 0.05);
+}

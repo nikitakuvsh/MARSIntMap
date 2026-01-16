@@ -1,0 +1,101 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    box-sizing: border-box;
+    background-color: #eeeeee;
+    font-family: sans-serif;
+    transition: all 0.3s ease-in-out;
+}
+
+html.dark-theme,
+body.dark-theme {
+    background-color: #2c2c2c !important;
+    color: #f0f0f0 !important;
+}
+
+body.dark-theme .filters__input_search,
+body.dark-theme .filters__select,
+body.dark-theme .filters__button,
+body.dark-theme .theme-color,
+body.dark-theme .filters__input_search:focus,
+body.dark-theme .filters__select:focus,
+body.dark-theme .filters__button:hover,
+body.dark-theme .theme-color:hover,
+body.dark-theme .filters__button:focus,
+body.dark-theme .theme-color:focus,
+body.dark-theme .ymaps-2-1-79-zoom__plus,
+body.dark-theme .ymaps-2-1-79-zoom__minus,
+body.dark-theme .ymaps-2-1-79-float-button,
+body.dark-theme .ymaps-2-1-79-zoom__plus:hover,
+body.dark-theme .ymaps-2-1-79-zoom__minus:hover,
+body.dark-theme .ymaps-2-1-79-float-button:hover 
+body.dark-theme .ymaps-2-1-79-zoom__plus:focus,
+body.dark-theme .ymaps-2-1-79-zoom__minus:focus,
+body.dark-theme .ymaps-2-1-79-float-button:focus, 
+body.dark-theme .filters__select option,
+body.dark-theme .excel-select,
+body.dark-theme .excel-select option,
+body.dark-theme li,
+body.dark-theme tr,
+body.dark-theme th,
+body.dark-theme tbody,
+body.dark-theme td,
+body.dark-theme .table__block,
+body.dark-theme .table__title,
+body.dark-theme .table,
+body.dark-theme .button-layers,
+body.dark-theme .layers__list,
+body.dark-theme .map-legends,
+body.dark-theme .color__title,
+body.dark-theme .filters__dropdown,
+body.dark-theme .filters__combo,
+body.dark-theme .filters__combo-list,
+body.dark-theme .regions-editor__modal,
+body.dark-theme .regions-editor__area,
+body.dark-theme .regions-editor__button {
+    background-color: #444444 !important;
+    color: #f0f0f0 !important;
+    border-color: #f0f0f0 !important;
+}
+
+body.dark-theme .table__th {
+    background-color: #2f2f2f !important;
+}
+
+body.dark-theme .ymaps-2-1-79-listbox__button,
+body.dark-theme .ymaps-2-1-79-listbox__button-icon {
+    background-color: #444444 !important;
+    color: #f0f0f0 !important;
+}
+
+body.dark-theme .ymaps-2-1-79-listbox__button-arrow {
+    background-color: transparent;
+    color: #f0f0f0;
+}
+
+body.dark-theme li:hover,
+body.dark-theme li.active,
+body.dark-theme .layers__li:hover {
+    background-color: #555555 !important;
+}
+
+select, button {
+    cursor: pointer;
+}
+
+.page__content {
+  display: flex;
+  gap: 20px
+}
+
+.pointer--none {
+    pointer-events: none !important;
+    cursor: not-allowed;
+}

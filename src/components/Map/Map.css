@@ -1,0 +1,25 @@
+.map {
+  width: 70%;
+  height: 100vh;
+  border: 4px solid black;
+  position: relative;
+  box-shadow: 0 0 10px rgba(0,0,0,0.3);
+  border-radius: 4px;
+}
+
+.ymaps-2-1-79-copyright__wrap,
+.ymaps-2-1-79-map-copyrights-promo {
+  display: none !important;
+}
+
+.ymaps-2-1-79-zoom__plus,
+.ymaps-2-1-79-zoom__minus,
+.ymaps-2-1-79-float-button {
+  transition: all 0.15s ease-in-out;
+}
+
+.ymaps-2-1-79-zoom__plus:hover,
+.ymaps-2-1-79-zoom__minus:hover,
+.ymaps-2-1-79-float-button:hover {
+  background-color: #f0f0f0 !important;
+}

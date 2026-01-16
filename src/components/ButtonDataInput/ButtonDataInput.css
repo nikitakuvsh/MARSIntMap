@@ -1,0 +1,17 @@
+.filters__button {
+    padding: 10px;
+    font-size: 16px;
+    cursor: pointer;
+    border: 1px solid black;
+}
+
+.button--data {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+.filters__button:hover {
+    cursor: pointer;
+}
