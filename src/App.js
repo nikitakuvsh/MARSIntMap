@@ -4,6 +4,7 @@ import FiltersDiv from "./components/filters/FiltersDiv";
 import Table from "./components/Table/Table";
 import Loading from "./components/Loading/Loading";
 import regionsByArea from "./components/Map/RegionsData";
+import MapFixed from "./components/Map/MapFixed";
 import './styles.css';  
 
 function App() {
@@ -25,7 +26,7 @@ function App() {
     <div className={`app ${loadingState ? 'pointer--none' : ''}`}>
       <Loading loadingState={loadingState} stopLoading={() => setLoadingState(false)} />
       <div className='page__content'>
-          <Map
+          <MapFixed
             selectedRegion={selectedRegion}
             setSelectedRegion={setSelectedRegion}
             selectedRegionView={selectedRegionView}

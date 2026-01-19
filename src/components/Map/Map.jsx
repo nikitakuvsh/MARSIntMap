@@ -25,6 +25,55 @@ export default function Map({ selectedRegion, setSelectedRegion, selectedRegionV
     const [avgSell, setAvgSell] = useState(0);
     const hsrPatterns = {};
 
+    async function loadBordersSafe(regionCode) {
+        let path;
+        switch (regionCode) {
+            case "RU": path = "RU_RU_ru_3.json"; break;
+            case "BY": path = "UN_BY_ru_3.json"; break;
+            case "UA": path = "RU_UA_ru_3.json"; break;
+            default: throw new Error("Нет локального JSON для " + regionCode);
+        }
+    
+        try {
+            const res = await fetch(path);
+            const json = await res.json();
+    
+            const geoObjects = [];
+    
+            Object.values(json.regions).forEach(region => {
+                const ways = region.ways || {};
+                Object.values(ways)
+                    .filter(arr => arr.length > 0)
+                    .forEach(path => {
+                        // меняем [lat, lon] → [lon, lat]
+                        const coords = path.map(([lat, lon]) => [lon, lat]);
+    
+                        const polygon = new window.ymaps.GeoObject({
+                            geometry: {
+                                type: "Polygon",
+                                coordinates: [coords] // обязательно вложенный массив
+                            },
+                            properties: {
+                                name: region.name
+                            }
+                        }, {
+                            fillColor: "rgba(0,0,0,0.1)",
+                            strokeColor: "#000",
+                            strokeWidth: 1
+                        });
+    
+                        geoObjects.push(polygon);
+                    });
+            });
+    
+            return geoObjects; // возвращаем массив GeoObject готовых к добавлению на карту
+        } catch (err) {
+            console.error(err);
+            return [];
+        }
+    }
+    
+
     function getHSRPattern(hsr, color) {
         if (hsrPatterns[hsr]) return hsrPatterns[hsr];
 
@@ -64,12 +113,22 @@ export default function Map({ selectedRegion, setSelectedRegion, selectedRegionV
 
             // Загружаем границы стран
             const [ru, by, ua] = await Promise.all([
-                window.ymaps.borders.load("RU", { lang: "ru", quality: 3 }),
-                window.ymaps.borders.load("BY", { lang: "ru", quality: 3 }),
-                window.ymaps.borders.load("UA", { lang: "ru", quality: 3 }),
+                // window.ymaps.borders.load("RU", { lang: "ru", quality: 3 }),
+                // window.ymaps.borders.load("BY", { lang: "ru", quality: 3 }),
+                // window.ymaps.borders.load("UA", { lang: "ru", quality: 3 }),
+                loadBordersSafe("RU", {lang: "ru", quality: 3}),
+                loadBordersSafe("BY", {lang: "ru", quality: 3}),
+                loadBordersSafe("UA", {lang: "ru", quality: 3}),
             ]);
 
-            const allBorders = [...ru.features, ...by.features, ...ua.features];
+            // ru, by, ua — массивы GeoObject
+const allBorders = [...ru, ...by, ...ua];
+
+console.log(ru);
+
+// добавляем все на карту
+allBorders.forEach(polygon => map.geoObjects.add(polygon));
+
 
 
             // Функция для обновления регионов на карте
@@ -85,20 +144,37 @@ export default function Map({ selectedRegion, setSelectedRegion, selectedRegionV
                 });
 
                 // Добавляем новые регионы
+                // allBorders.forEach(feature => {
+                //     const featureName = feature.properties.name;
+
+                //     // Находим совпадение с нашим массивом по частичному совпадению
+                //     const matchedRegion = allRegions.find(r => featureName.toLowerCase().includes(r.toLowerCase()));
+                //     if (!matchedRegion) return; // если нет совпадения, пропускаем
+
+                //     if (regions[matchedRegion]) return; // уже создан
+
+                //     const polygon = new window.ymaps.GeoObject(feature, {
+                //         fillColor: "rgba(0,0,0,0)",
+                //         strokeColor: "rgba(0,0,0,0.5)",
+                //         strokeWidth: 1,
+                //     });
+
                 allBorders.forEach(feature => {
+                    if (!feature.geometry || !feature.properties?.name) return;
                     const featureName = feature.properties.name;
 
-                    // Находим совпадение с нашим массивом по частичному совпадению
                     const matchedRegion = allRegions.find(r => featureName.toLowerCase().includes(r.toLowerCase()));
-                    if (!matchedRegion) return; // если нет совпадения, пропускаем
-
-                    if (regions[matchedRegion]) return; // уже создан
-
-                    const polygon = new window.ymaps.GeoObject(feature, {
-                        fillColor: "rgba(0,0,0,0)",
-                        strokeColor: "rgba(0,0,0,0.5)",
-                        strokeWidth: 1,
+                
+                    const polygon = new window.ymaps.GeoObject({
+                        geometry: feature.geometry,
+                        properties: { name: feature.properties.name }
+                    }, {
+                        fillColor: "rgba(0,0,0,0.1)",
+                        strokeColor: "#000",
+                        strokeWidth: 1
                     });
+                    map.geoObjects.add(polygon);
+                
 
                     // polygon.events
                     //     .add("mouseenter", () => {
