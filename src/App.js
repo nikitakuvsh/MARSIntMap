@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import Map from "./components/Map/Map";
+import Map from "./components/Map/YandexMap";
 import FiltersDiv from "./components/filters/FiltersDiv";
 import Table from "./components/Table/Table";
 import Loading from "./components/Loading/Loading";
@@ -48,7 +48,7 @@ function App() {
             regionsByArea={regionsData} />
       </div>
       <div className="table__content">
-        <Table excelData={excelData} filters={filters} setTableValues={setTableValues}></Table>
+        <Table excelData={excelData} filters={filters} setTableValues={setTableValues} />
       </div>
     </div>
   );

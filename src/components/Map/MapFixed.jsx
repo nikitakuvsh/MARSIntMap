@@ -19,7 +19,7 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
   const [activeRegions, setActiveRegions] = useState([]);
   const activeRegionsRef = useRef([]);
   const [modalMessageVisible, setModalMessageVisible] = useState(false);
-  activeRegionsRef.current = activeRegions; // реф всегда хранит актуальный массив
+  activeRegionsRef.current = activeRegions;
   const [distributorLegends, setDistributorLegends] = useState([]);
   const [hsrLegends, setHSRLegends] = useState([]);
   const [selectedLayers, setSelectedLayers] = useState([]);
@@ -46,7 +46,6 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
 
     console.log("[Leaflet regions sync] start");
 
-    // плоский список регионов, как у тебя было
     const allRegions = Object.values(regionsByArea).flat();
 
     console.log("[Leaflet regions sync] active regions:", allRegions);
@@ -96,15 +95,8 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
   }, [selectedRegionView]);
 
 
-
-
   return (
-    <MapContainer
-      center={[61, 105]}
-      zoom={3}
-      style={{ height: "100vh", width: "100%" }}
-      className="map"
-    >
+    <MapContainer center={[61, 105]} zoom={3} style={{ height: "100vh", width: "100%" }} className="map">
       {styleMap && (
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
       )}
@@ -112,21 +104,10 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
       {geoData && (
         <>
           {visibleGeoData && (
-            <GeoJSON
-              ref={geoJsonRef}
-              data={visibleGeoData}
-              onEachFeature={(f, l) => {
-                const name = f.properties.shapeName;
-                l.bindTooltip(name);
-              }}
-            />
+            <GeoJSON ref={geoJsonRef} data={visibleGeoData} onEachFeature={(f, l) => { const name = f.properties.shapeName; l.bindTooltip(name); }} />
           )}
 
-
-          <ZoomToRegion
-            geoData={geoData}
-            selectedRegion={selectedRegion}
-          />
+          <ZoomToRegion geoData={geoData} selectedRegion={selectedRegion} />
         </>
       )}
       <ButtonThemeColor />

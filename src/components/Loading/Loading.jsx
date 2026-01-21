@@ -8,7 +8,7 @@ export default function Loading({ loadingState, stopLoading }) {
 
         setTimeout(() => {
             stopLoading();
-        }, 5000)
+        }, 908)
     })
 
     return (

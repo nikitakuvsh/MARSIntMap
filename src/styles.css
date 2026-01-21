@@ -59,7 +59,10 @@ body.dark-theme .filters__combo,
 body.dark-theme .filters__combo-list,
 body.dark-theme .regions-editor__modal,
 body.dark-theme .regions-editor__area,
-body.dark-theme .regions-editor__button {
+body.dark-theme .regions-editor__button,
+body.dark-theme .style-map--button,
+body.dark-theme .leaflet-control-zoom-in,
+body.dark-theme .leaflet-control-zoom-out {
     background-color: #444444 !important;
     color: #f0f0f0 !important;
     border-color: #f0f0f0 !important;
@@ -82,7 +85,10 @@ body.dark-theme .ymaps-2-1-79-listbox__button-arrow {
 
 body.dark-theme li:hover,
 body.dark-theme li.active,
-body.dark-theme .layers__li:hover {
+body.dark-theme .layers__li:hover,
+body.dark-theme .leaflet-control-zoom-in:hover,
+body.dark-theme .leaflet-control-zoom-out:hover,
+body.dark-theme .style-map--button:hover {
     background-color: #555555 !important;
 }
 
