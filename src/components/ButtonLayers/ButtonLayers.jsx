@@ -10,7 +10,7 @@ export default function ButtonLayers({
     setHSRLegends,
 }) {
     const [listView, setListView] = useState(false);
-    const colorsGenerated = useState({})[0];
+    const colorsGenerated = useState({})[0]; // сохраняем цвета навсегда
 
     const toggleLayer = (layer) => {
         const isEnabled = selectedLayers.includes(layer);
@@ -21,53 +21,58 @@ export default function ButtonLayers({
         setSelectedLayers(next);
 
         // ---------- DISTRIBUTOR ----------
-        if (layer === 'DistributorLayer' && !isEnabled) {
-            const distributors = [
-                ...new Set(excelData.map(r => r.Distributor).filter(Boolean))
-            ];
+        if (layer === 'DistributorLayer') {
+            if (!isEnabled) {
+                const distributors = [
+                    ...new Set(excelData.map(r => r.Distributor).filter(Boolean))
+                ];
 
-            const legends = distributors.map(d => {
-                if (!colorsGenerated[d]) {
-                    colorsGenerated[d] =
-                        `#${Math.floor(Math.random() * 0xffffff)
-                            .toString(16)
-                            .padStart(6, '0')}`;
-                }
-                return { title: d, color: colorsGenerated[d] };
-            });
+                // Генерируем цвет только для новых дистрибьюторов
+                distributors.forEach(d => {
+                    if (!colorsGenerated[d]) {
+                        colorsGenerated[d] =
+                            `#${Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0')}`;
+                    }
+                });
 
-            setDistributorLegends(legends);
-        }
+                const legends = distributors.map(d => ({
+                    title: d,
+                    color: colorsGenerated[d]
+                }));
 
-        if (layer === 'DistributorLayer' && isEnabled) {
-            setDistributorLegends([]);
+                setDistributorLegends(legends);
+            } else {
+                setDistributorLegends([]);
+            }
         }
 
         // ---------- HSR ----------
-        if (layer === 'HSRLayer' && !isEnabled) {
-            const hsrs = [
-                ...new Set(
-                    excelData
-                        .map(r => r["Region / HSR"])
-                        .filter(h => h && h !== "0")
-                )
-            ];
+        if (layer === 'HSRLayer') {
+            if (!isEnabled) {
+                const hsrs = [
+                    ...new Set(
+                        excelData
+                            .map(r => r["Region / HSR"])
+                            .filter(h => h && h !== "0")
+                    )
+                ];
 
-            const legends = hsrs.map(hsr => {
-                if (!colorsGenerated[hsr]) {
-                    colorsGenerated[hsr] =
-                        `#${Math.floor(Math.random() * 0xffffff)
-                            .toString(16)
-                            .padStart(6, '0')}`;
-                }
-                return { title: hsr, color: colorsGenerated[hsr] };
-            });
+                hsrs.forEach(hsr => {
+                    if (!colorsGenerated[hsr]) {
+                        colorsGenerated[hsr] =
+                            `#${Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0')}`;
+                    }
+                });
 
-            setHSRLegends(legends);
-        }
+                const legends = hsrs.map(hsr => ({
+                    title: hsr,
+                    color: colorsGenerated[hsr]
+                }));
 
-        if (layer === 'HSRLayer' && isEnabled) {
-            setHSRLegends([]);
+                setHSRLegends(legends);
+            } else {
+                setHSRLegends([]);
+            }
         }
     };
 

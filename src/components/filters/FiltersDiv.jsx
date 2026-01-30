@@ -5,9 +5,10 @@ import FiltersPosition from "./FiltersPosition";
 import FiltersRegions from "./FiltersRegions";
 import FiltersManagers from "./FiltersManagers";
 import FiltersMapInformation from "./FiltersMapInformation";
+import FiltersSheets from "./FiltersSheets";
 import './FiltersDiv.css';
 
-export default function FiltersDiv({ onSelectRegion, setSelectedRegion, setSelectedRegionView, excelData, setExcelData, filters, setFilters, tableValues, regionsByArea }){
+export default function FiltersDiv({ onSelectRegion, setSelectedRegion, setSelectedRegionView, excelData, setExcelData, filters, setFilters, tableValues, regionsByArea, sheetNames, setSheetNames, activeSheet, setActiveSheet, workbook, setWorkbook }){
 
     const filteredData = excelData.filter((row) => {
         return (
@@ -20,13 +21,19 @@ export default function FiltersDiv({ onSelectRegion, setSelectedRegion, setSelec
 
     return (
         <div className="filters">
-            <ButtonDataInput onDataLoaded={setExcelData} />
+            <ButtonDataInput onDataLoaded={setExcelData} sheetNames={sheetNames} setSheetNames={setSheetNames} activeSheet={activeSheet} setActiveSheet={setActiveSheet} workbook={workbook} setWorkbook={setWorkbook} />
             <h2 className="filters__title">Фильтры</h2>
-            <FiltersSearch onSelectRegion={onSelectRegion}/>
-            <FiltersRegions regionsByArea={regionsByArea} setSelectedRegionView={setSelectedRegionView} />
-            <FiltersPosition excelData={excelData} filters={filters} setFilters={setFilters} setSelectedRegionView={setSelectedRegionView} />
-            <FiltersManagers excelData={excelData} filter={filters} setFilters={setFilters} />
-            <FiltersMapInformation filters={filters} setFilters={setFilters} tableValues={tableValues} />
+            {sheetNames.length === 0 && (<FiltersSearch onSelectRegion={onSelectRegion} />)}
+            {sheetNames.length != 0 && (
+                <>
+                    <FiltersSheets sheetNames={sheetNames} activeSheet={activeSheet} setSheetNames={setSheetNames} setActiveSheet={setActiveSheet} workbook={workbook} setWorkbook={setWorkbook} />
+                    <FiltersSearch onSelectRegion={onSelectRegion}/>
+                    <FiltersRegions regionsByArea={regionsByArea} setSelectedRegionView={setSelectedRegionView} />
+                    <FiltersPosition excelData={excelData} filters={filters} setFilters={setFilters} setSelectedRegionView={setSelectedRegionView} />
+                    <FiltersManagers excelData={excelData} filter={filters} setFilters={setFilters} />
+                    <FiltersMapInformation filters={filters} setFilters={setFilters} tableValues={tableValues} />    
+                </>
+            )}
         </div>
     );
 }

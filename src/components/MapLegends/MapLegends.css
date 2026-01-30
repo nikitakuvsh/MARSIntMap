@@ -14,6 +14,7 @@
     display: flex;
     gap: 14px;
     align-items: center;
+    cursor: pointer;
 }
 
 .color-block {
@@ -38,4 +39,20 @@
 
 .map-legends.hidden {
     display: none;
+}
+
+.legends__wrapper--flex {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 8px;
+    max-height: 150px; /* можно подстроить под карту */
+    overflow-y: auto;
+}
+
+.legends__toggle-btn {
+    background: none;
+    border: none;
+    font-size: 16px;
+    padding: 2px 6px;
 }

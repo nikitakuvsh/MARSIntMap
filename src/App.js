@@ -20,6 +20,9 @@ function App() {
   const [tableValues, setTableValues] = useState('');
   const [loadingState, setLoadingState] = useState(true);
   const [regionsData, setRegionsData] = useState(() => ({ ...regionsByArea }));
+  const [workbook, setWorkbook] = useState(null);
+  const [sheetNames, setSheetNames] = useState([]);
+  const [activeSheet, setActiveSheet] = useState("");
 
 
   return (
@@ -35,6 +38,7 @@ function App() {
             mapDataColumnValues={filters.mapDataColumn ? tableValues[filters.mapDataColumn] : []}
             regionsByArea={regionsData}
             setRegionsData={setRegionsData}
+            filters={filters}
           />
           <FiltersDiv 
             onSelectRegion={setSelectedRegion} 
@@ -45,7 +49,14 @@ function App() {
             filters={filters} 
             setFilters={setFilters} 
             tableValues={tableValues}
-            regionsByArea={regionsData} />
+            regionsByArea={regionsData}
+            workbook={workbook} 
+            setWorkbook={setWorkbook} 
+            sheetNames={sheetNames}
+            setSheetNames={setSheetNames}
+            activeSheet={activeSheet}
+            setActiveSheet={setActiveSheet}
+            />
       </div>
       <div className="table__content">
         <Table excelData={excelData} filters={filters} setTableValues={setTableValues} />

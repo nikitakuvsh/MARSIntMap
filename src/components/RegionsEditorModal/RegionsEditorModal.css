@@ -10,7 +10,7 @@
     color: black;
     font-size: 30px;
     cursor: pointer;
-    z-index: 1001;
+    z-index: 1005;
     transition: all 0.15s ease-in-out;
 }
 
@@ -28,7 +28,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
+    z-index: 1005;
 }
 
 .regions-editor__modal {
@@ -37,7 +37,7 @@
     background: #fff;
     padding: 20px;
     border-radius: 8px;
-    overflow-y: auto;
+    overflow-y: scroll !important;
     max-height: 80%;
 }
 
