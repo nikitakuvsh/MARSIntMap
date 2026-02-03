@@ -4,14 +4,16 @@ import "leaflet/dist/leaflet.css";
 import ZoomToRegion from "./hooks/ZoomToRegion";
 import ButtonThemeColor from "../ButtonThemeColor/ButtonThemeColor";
 import ButtonLayers from "../ButtonLayers/ButtonLayers";
+import ButtonBug from "../ButtonBug/ButtonBug";
 import MapLegends from "../MapLegends/MapLegends";
 import RegionsEditorModal from "../RegionsEditorModal/RegionsEditorModal";
 import './Map.css';
 import closedEyeIcon from '../../images/icons/closedEye.png';
 import openedEyeIcon from '../../images/icons/openedEye.png';
 import RegionsEditorModalContent from "../RegionsEditorModal/RegionsEditorModalContent";
+import { resolveRegionName } from "./hooks/ResolveRegionName";
 
-export default function MapLeaflet({ selectedRegion, setSelectedRegion, selectedRegionView = [], setSelectedRegionView, excelData = [], mapDataColumn = null, mapDataColumnValues = [], regionsByArea, setRegionsData, filters }) {
+export default function MapLeaflet({ selectedRegion, setSelectedRegion, selectedRegionView = [], setSelectedRegionView, excelData = [], mapDataColumn = null, mapDataColumnValues = [], regionsByArea, setRegionsData, filters, setHeaderRange }) {
   const [geoData, setGeoData] = useState(null);
   const redColor = "rgba(255, 0, 0, 0.82)";
   const greenColor = "rgba(6, 255, 6, 0.8)";
@@ -92,7 +94,16 @@ useEffect(() => {
   // В начале компонента добавляем
   // 🔹 сохраняем цвета между рендерами
 
-  // Далее в useEffect заменяем
+  const pick = (row, ...keys) => {
+        for (const k of keys) {
+            const v = row[k];
+            if (v !== undefined && v !== null && String(v).trim() !== "") {
+                return v;
+            }
+        }
+        return null;
+    };
+
 useEffect(() => {
   if (!geoJsonRef.current || !excelData.length) return;
 
@@ -106,20 +117,34 @@ useEffect(() => {
     let weight = 1;
     let fillOpacity = 0;
 
-    // подсветка активных регионов сохраняется
+    // Подсветка активных регионов
     if (activeRegions.includes(name)) {
       fillColor = "rgba(6, 255, 6, 0.8)";
       weight = 2;
       fillOpacity = 0.7;
     }
 
-    const rows = excelData.filter(r => r.District === name);
+    // Берём строки Excel, которые соответствуют этому региону через resolveRegionName
+    const rows = excelData.filter(r => {
+      const regionValue = pick(
+        r,
+        "Область",
+        "District",
+        "Дистр"
+      );
+
+      const excelRegions = resolveRegionName(regionValue) || [];
+
+      return excelRegions.includes(name);
+    });
+
+
     if (rows.length) {
-      // Distributor полностью
+      // Distributor слой
       if (selectedLayers.includes("DistributorLayer")) {
-        const distributorRow = rows.find(r => r.Distributor);
+        const distributorRow = rows.find(r => pick(r, "Distributor", "Дистр"));
         if (distributorRow) {
-          const d = distributorRow.Distributor;
+          const d = pick(distributorRow, "Distributor", "Дистр");
           if (!colorsGenerated[d]) {
             colorsGenerated[d] = `#${Math.floor(Math.random() * 0xffffff).toString(16).padStart(6,"0")}`;
           }
@@ -129,11 +154,11 @@ useEffect(() => {
         }
       }
 
-      // HSR кружки — фильтруем только если фильтр выбран, иначе все
+      // HSR кружки — фильтруем только если фильтр выбран
       if (selectedLayers.includes("HSRLayer")) {
-        const hsrRow = rows.find(r => !filters.region?.length || filters.region.includes(r["Region / HSR"]));
+        const hsrRow = rows.find(r => !filters.region?.length || filters.region.includes(pick(r, "Region / HSR", "Позиция менеджера")));
         if (hsrRow) {
-          const h = hsrRow["Region / HSR"];
+          const h = pick(hsrRow, "Region / HSR", "Позиция менеджера");
           if (!colorsGenerated[h]) {
             colorsGenerated[h] = `#${Math.floor(Math.random() * 0xffffff).toString(16).padStart(6,"0")}`;
           }
@@ -157,7 +182,7 @@ useEffect(() => {
   // Обновляем легенды
   if (selectedLayers.includes("DistributorLayer")) {
     const distributorLegends = excelData
-      .map(r => r.Distributor)
+      .map(r => pick(r, "Distributor", "Дистр"))
       .filter(Boolean)
       .map(d => ({ title: d, color: colorsGenerated[d] }))
       .filter((v,i,a)=>a.findIndex(x=>x.title===v.title)===i);
@@ -166,8 +191,8 @@ useEffect(() => {
 
   if (selectedLayers.includes("HSRLayer")) {
     const hsrLegends = excelData
-      .filter(r => !filters.region?.length || filters.region.includes(r["Region / HSR"]))
-      .map(r => r["Region / HSR"])
+      .filter(r => !filters.region?.length || filters.region.includes(pick(r, "Region / HSR", "Позиция менеджера")))
+      .map(r => pick(r, "Region / HSR", "Позиция менеджера"))
       .filter(Boolean)
       .map(h => ({ title: h, color: colorsGenerated[h] }))
       .filter((v,i,a)=>a.findIndex(x=>x.title===v.title)===i);
@@ -207,6 +232,7 @@ useEffect(() => {
           <ButtonLayers excelData={excelData} distributorLegends={distributorLegends} setDistributorLegends={setDistributorLegends} selectedLayers={selectedLayers} setSelectedLayers={setSelectedLayers} setHSRLegends={setHSRLegends} />
           <MapLegends distributorLegends={distributorLegends} hsrLegends={hsrLegends} />
           <RegionsEditorModal openModal={() => setRegionsEditorModalOpen(prev => !prev)}/>
+          <ButtonBug setHeaderRange={setHeaderRange} />
           <button className="style-map--button" onClick={() => setStyleMap(prev => !prev)} title="Изменить стиль карты"><img src={styleMap ? openedEyeIcon : closedEyeIcon} alt="Глаз" /></button>
         </MapContainer>
           <>

@@ -1,17 +1,24 @@
 import { useState, useRef, useEffect } from "react";
 import { utils } from "xlsx";
 
-export default function FiltersSheets({ sheetNames, activeSheet, setActiveSheet, workbook }) {
+const LS_KEY = "active_excel_sheet";
+
+export default function FiltersSheets({ sheetNames = [], activeSheet, setActiveSheet, workbook }) {
     const [open, setOpen] = useState(false);
     const wrapperRef = useRef(null);
 
-    const handleSelectSheet = (name) => {
-        setActiveSheet(name);
-        setOpen(false);
-        if (!workbook || !workbook.Sheets?.[name]) return;
-        const worksheet = workbook.Sheets[name];
-        const jsonData = utils.sheet_to_json(worksheet, { defval: "", raw: true });
+    const safeLoadSheet = (name) => {
+        if (!workbook?.Sheets?.[name]) return;
+        const jsonData = utils.sheet_to_json(workbook.Sheets[name], { defval: "", raw: true });
         console.log(`Данные листа "${name}":`, jsonData);
+    };
+
+    const handleSelectSheet = (name) => {
+        if (!name) return;
+        setActiveSheet(name);
+        localStorage.setItem(LS_KEY, name);
+        setOpen(false);
+        safeLoadSheet(name);
     };
 
     useEffect(() => {
@@ -19,6 +26,15 @@ export default function FiltersSheets({ sheetNames, activeSheet, setActiveSheet,
         document.addEventListener("mousedown", handler);
         return () => document.removeEventListener("mousedown", handler);
     }, []);
+
+    useEffect(() => {
+        if (!sheetNames.length) return;
+        const saved = localStorage.getItem(LS_KEY);
+        if (saved && sheetNames.includes(saved)) { setActiveSheet(saved); safeLoadSheet(saved); return; }
+        if (activeSheet && sheetNames.includes(activeSheet)) return;
+        const first = sheetNames[0];
+        if (first) { setActiveSheet(first); localStorage.setItem(LS_KEY, first); safeLoadSheet(first); }
+    }, [sheetNames]);
 
     return (
         <div className="filters__group" ref={wrapperRef}>

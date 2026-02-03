@@ -23,6 +23,7 @@ function App() {
   const [workbook, setWorkbook] = useState(null);
   const [sheetNames, setSheetNames] = useState([]);
   const [activeSheet, setActiveSheet] = useState("");
+  const [headerRange, setHeaderRange] = useState(0);
 
 
   return (
@@ -39,6 +40,7 @@ function App() {
             regionsByArea={regionsData}
             setRegionsData={setRegionsData}
             filters={filters}
+            setHeaderRange={setHeaderRange}
           />
           <FiltersDiv 
             onSelectRegion={setSelectedRegion} 
@@ -56,6 +58,7 @@ function App() {
             setSheetNames={setSheetNames}
             activeSheet={activeSheet}
             setActiveSheet={setActiveSheet}
+            headerRange={headerRange}
             />
       </div>
       <div className="table__content">

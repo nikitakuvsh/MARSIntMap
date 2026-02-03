@@ -8,7 +8,7 @@ import FiltersMapInformation from "./FiltersMapInformation";
 import FiltersSheets from "./FiltersSheets";
 import './FiltersDiv.css';
 
-export default function FiltersDiv({ onSelectRegion, setSelectedRegion, setSelectedRegionView, excelData, setExcelData, filters, setFilters, tableValues, regionsByArea, sheetNames, setSheetNames, activeSheet, setActiveSheet, workbook, setWorkbook }){
+export default function FiltersDiv({ onSelectRegion, setSelectedRegion, setSelectedRegionView, excelData, setExcelData, filters, setFilters, tableValues, regionsByArea, sheetNames, setSheetNames, activeSheet, setActiveSheet, workbook, setWorkbook, headerRange }){
 
     const filteredData = excelData.filter((row) => {
         return (
@@ -21,7 +21,7 @@ export default function FiltersDiv({ onSelectRegion, setSelectedRegion, setSelec
 
     return (
         <div className="filters">
-            <ButtonDataInput onDataLoaded={setExcelData} sheetNames={sheetNames} setSheetNames={setSheetNames} activeSheet={activeSheet} setActiveSheet={setActiveSheet} workbook={workbook} setWorkbook={setWorkbook} />
+            <ButtonDataInput onDataLoaded={setExcelData} sheetNames={sheetNames} setSheetNames={setSheetNames} activeSheet={activeSheet} setActiveSheet={setActiveSheet} workbook={workbook} setWorkbook={setWorkbook} headerRange={headerRange} />
             <h2 className="filters__title">Фильтры</h2>
             {sheetNames.length === 0 && (<FiltersSearch onSelectRegion={onSelectRegion} />)}
             {sheetNames.length != 0 && (

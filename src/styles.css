@@ -63,7 +63,8 @@ body.dark-theme .regions-editor__button,
 body.dark-theme .style-map--button,
 body.dark-theme .leaflet-control-zoom-in,
 body.dark-theme .leaflet-control-zoom-out,
-body.dark-theme .legends__toggle-btn {
+body.dark-theme .legends__toggle-btn,
+body.dark-theme .button-bug {
     background-color: #444444 !important;
     color: #f0f0f0 !important;
     border-color: #f0f0f0 !important;

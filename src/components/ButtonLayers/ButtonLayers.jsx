@@ -1,6 +1,6 @@
 import './ButtonLayers.css';
 import layersIcon from '../../images/icons/layers.png';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 
 export default function ButtonLayers({
     excelData = [],
@@ -10,7 +10,18 @@ export default function ButtonLayers({
     setHSRLegends,
 }) {
     const [listView, setListView] = useState(false);
-    const colorsGenerated = useState({})[0]; // сохраняем цвета навсегда
+    const colorsGenerated = useRef({});
+
+    // Универсальный ИЛИ по колонкам
+    const pick = (row, ...keys) => {
+        for (const k of keys) {
+            const v = row[k];
+            if (v !== undefined && v !== null && String(v).trim() !== "") {
+                return v;
+            }
+        }
+        return null;
+    };
 
     const toggleLayer = (layer) => {
         const isEnabled = selectedLayers.includes(layer);
@@ -23,24 +34,33 @@ export default function ButtonLayers({
         // ---------- DISTRIBUTOR ----------
         if (layer === 'DistributorLayer') {
             if (!isEnabled) {
+
                 const distributors = [
-                    ...new Set(excelData.map(r => r.Distributor).filter(Boolean))
+                    ...new Set(
+                        excelData
+                            .map(r => pick(r, "Distributor", "Дистр"))
+                            .filter(Boolean)
+                    )
                 ];
 
-                // Генерируем цвет только для новых дистрибьюторов
+                console.log("[Layers] Найдены дистрибьюторы:", distributors);
+
                 distributors.forEach(d => {
-                    if (!colorsGenerated[d]) {
-                        colorsGenerated[d] =
-                            `#${Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0')}`;
+                    if (!colorsGenerated.current[d]) {
+                        colorsGenerated.current[d] =
+                            `#${Math.floor(Math.random() * 0xffffff)
+                                .toString(16)
+                                .padStart(6, '0')}`;
                     }
                 });
 
-                const legends = distributors.map(d => ({
-                    title: d,
-                    color: colorsGenerated[d]
-                }));
+                setDistributorLegends(
+                    distributors.map(d => ({
+                        title: d,
+                        color: colorsGenerated.current[d]
+                    }))
+                );
 
-                setDistributorLegends(legends);
             } else {
                 setDistributorLegends([]);
             }
@@ -49,27 +69,33 @@ export default function ButtonLayers({
         // ---------- HSR ----------
         if (layer === 'HSRLayer') {
             if (!isEnabled) {
+
                 const hsrs = [
                     ...new Set(
                         excelData
-                            .map(r => r["Region / HSR"])
+                            .map(r => pick(r, "Region / HSR", "Позиция менеджера"))
                             .filter(h => h && h !== "0")
                     )
                 ];
 
+                console.log("[Layers] Найдены HSR / позиции:", hsrs);
+
                 hsrs.forEach(hsr => {
-                    if (!colorsGenerated[hsr]) {
-                        colorsGenerated[hsr] =
-                            `#${Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0')}`;
+                    if (!colorsGenerated.current[hsr]) {
+                        colorsGenerated.current[hsr] =
+                            `#${Math.floor(Math.random() * 0xffffff)
+                                .toString(16)
+                                .padStart(6, '0')}`;
                     }
                 });
 
-                const legends = hsrs.map(hsr => ({
-                    title: hsr,
-                    color: colorsGenerated[hsr]
-                }));
+                setHSRLegends(
+                    hsrs.map(hsr => ({
+                        title: hsr,
+                        color: colorsGenerated.current[hsr]
+                    }))
+                );
 
-                setHSRLegends(legends);
             } else {
                 setHSRLegends([]);
             }

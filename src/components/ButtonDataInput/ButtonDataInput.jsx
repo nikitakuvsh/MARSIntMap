@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { read, utils } from "xlsx";
 import ModalMessage from "../ModalMessage/ModalMessage";
 import "./ButtonDataInput.css";
@@ -10,12 +10,14 @@ export default function ButtonDataInput({
   sheetNames,
   setSheetNames,
   activeSheet,
-  setActiveSheet
+  setActiveSheet,
+  headerRange
 }) {
   const [fileName, setFileName] = useState("");
   const [showMessage, setShowMessage] = useState(false);
   const [isError, setIsError] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
+  const fileInputRef = useRef(null);
 
   const handleFile = (e) => {
     const file = e.target.files?.[0];
@@ -45,6 +47,7 @@ export default function ButtonDataInput({
         setModalMessage("Не удалось прочитать Excel файл");
       } finally {
         setShowMessage(true);
+        if (fileInputRef.current) fileInputRef.current.value = "";
       }
     };
 
@@ -52,6 +55,7 @@ export default function ButtonDataInput({
       setIsError(true);
       setModalMessage("Ошибка чтения файла");
       setShowMessage(true);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     };
 
     reader.readAsArrayBuffer(file);
@@ -64,7 +68,8 @@ export default function ButtonDataInput({
 
     const jsonData = utils.sheet_to_json(worksheet, {
       defval: "",
-      raw: true
+      raw: true,
+      range: headerRange
     });
 
     const sellTotals = jsonData
@@ -87,27 +92,17 @@ export default function ButtonDataInput({
     if (workbook && activeSheet) {
       processSheet(workbook, activeSheet);
     }
-  }, [workbook, activeSheet]);
+  }, [workbook, activeSheet, headerRange]);
 
   return (
     <div className="filters__button">
       <label className="button--data">
         {fileName || "Выбрать Excel файл"}
-        <input
-          type="file"
-          accept=".xlsx,.xls"
-          onChange={handleFile}
-          hidden
-        />
+        <input ref={fileInputRef} type="file" accept=".xlsx,.xls" onChange={handleFile} hidden />
       </label>
 
       {showMessage && (
-        <ModalMessage
-          message={modalMessage}
-          isError={isError}
-          onClose={() => setShowMessage(false)}
-          messageError=""
-        />
+        <ModalMessage message={modalMessage} isError={isError} onClose={() => setShowMessage(false)} messageError="" />
       )}
     </div>
   );

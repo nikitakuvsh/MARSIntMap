@@ -1,6 +1,3 @@
-// RegionsEditorModal.jsx
-import { useState } from "react";
-import RegionsEditorModalContent from "./RegionsEditorModalContent";
 import "./RegionsEditorModal.css";
 
 export default function RegionsEditorModal({ openModal}) {
