@@ -8,17 +8,16 @@ export default function ButtonLayers({
     setSelectedLayers,
     setDistributorLegends,
     setHSRLegends,
+    setManagerLegends,
+    setTerritoryLegends, // новый проп
 }) {
     const [listView, setListView] = useState(false);
     const colorsGenerated = useRef({});
 
-    // Универсальный ИЛИ по колонкам
     const pick = (row, ...keys) => {
         for (const k of keys) {
             const v = row[k];
-            if (v !== undefined && v !== null && String(v).trim() !== "") {
-                return v;
-            }
+            if (v !== undefined && v !== null && String(v).trim() !== "") return v;
         }
         return null;
     };
@@ -34,71 +33,62 @@ export default function ButtonLayers({
         // ---------- DISTRIBUTOR ----------
         if (layer === 'DistributorLayer') {
             if (!isEnabled) {
-
-                const distributors = [
-                    ...new Set(
-                        excelData
-                            .map(r => pick(r, "Distributor", "Дистр"))
-                            .filter(Boolean)
-                    )
-                ];
-
-                console.log("[Layers] Найдены дистрибьюторы:", distributors);
-
+                const distributors = [...new Set(excelData.map(r => pick(r, "Distributor", "Дистр")).filter(Boolean))];
                 distributors.forEach(d => {
                     if (!colorsGenerated.current[d]) {
                         colorsGenerated.current[d] =
-                            `#${Math.floor(Math.random() * 0xffffff)
-                                .toString(16)
-                                .padStart(6, '0')}`;
+                            `#${Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0')}`;
                     }
                 });
-
-                setDistributorLegends(
-                    distributors.map(d => ({
-                        title: d,
-                        color: colorsGenerated.current[d]
-                    }))
-                );
-
-            } else {
-                setDistributorLegends([]);
-            }
+                setDistributorLegends(distributors.map(d => ({ title: d, color: colorsGenerated.current[d] })));
+            } else setDistributorLegends([]);
         }
 
         // ---------- HSR ----------
         if (layer === 'HSRLayer') {
             if (!isEnabled) {
-
-                const hsrs = [
-                    ...new Set(
-                        excelData
-                            .map(r => pick(r, "Region / HSR", "Позиция менеджера"))
-                            .filter(h => h && h !== "0")
-                    )
-                ];
-
-                console.log("[Layers] Найдены HSR / позиции:", hsrs);
-
+                const hsrs = [...new Set(
+                    excelData.map(r => pick(r, "Region / HSR", "Позиция менеджера")).filter(Boolean)
+                )];
                 hsrs.forEach(hsr => {
                     if (!colorsGenerated.current[hsr]) {
                         colorsGenerated.current[hsr] =
-                            `#${Math.floor(Math.random() * 0xffffff)
-                                .toString(16)
-                                .padStart(6, '0')}`;
+                            `#${Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0')}`;
+                    }
+                });
+                setHSRLegends(hsrs.map(h => ({ title: h, color: colorsGenerated.current[h] })));
+            } else setHSRLegends([]);
+        }
+
+        // ---------- MANAGER ----------
+        if (layer === 'ManagerLayer') {
+            if (!isEnabled) {
+                const managers = [...new Set(excelData.map(r => pick(r, "Manager", "Менеджер")).filter(Boolean))];
+                managers.forEach(m => {
+                    if (!colorsGenerated.current[m]) {
+                        colorsGenerated.current[m] =
+                            `#${Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0')}`;
+                    }
+                });
+                setManagerLegends(managers.map(m => ({ title: m, color: colorsGenerated.current[m] })));
+            } else setManagerLegends([]);
+        }
+
+        // ---------- TERRITORY ----------
+        if (layer === 'TerritoryLayer') {
+            if (!isEnabled) {
+                // Получаем все уникальные Territory
+                const territories = [...new Set(excelData.map(r => pick(r, "Territory", "Территория")).filter(Boolean))];
+
+                territories.forEach(t => {
+                    if (!colorsGenerated.current[t]) {
+                        colorsGenerated.current[t] =
+                            `#${Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0')}`;
                     }
                 });
 
-                setHSRLegends(
-                    hsrs.map(hsr => ({
-                        title: hsr,
-                        color: colorsGenerated.current[hsr]
-                    }))
-                );
-
-            } else {
-                setHSRLegends([]);
-            }
+                setTerritoryLegends(territories.map(t => ({ title: t, color: colorsGenerated.current[t] })));
+            } else setTerritoryLegends([]);
         }
     };
 
@@ -109,11 +99,7 @@ export default function ButtonLayers({
                 title="layers"
                 onClick={() => setListView(v => !v)}
             >
-                <img
-                    className="button-layers__icon"
-                    alt="layers"
-                    src={layersIcon}
-                />
+                <img className="button-layers__icon" alt="layers" src={layersIcon} />
             </button>
 
             {listView && (
@@ -134,6 +120,15 @@ export default function ButtonLayers({
                             onChange={() => toggleLayer('ManagerLayer')}
                         />
                         Manager слой
+                    </label>
+
+                    <label className="layers__li">
+                        <input
+                            type="checkbox"
+                            checked={selectedLayers.includes('TerritoryLayer')}
+                            onChange={() => toggleLayer('TerritoryLayer')}
+                        />
+                        Territory слой
                     </label>
 
                     <label className="layers__li">

@@ -36,6 +36,17 @@ export default function FiltersRegions({ regionsByArea, setSelectedRegionView })
         return () => document.removeEventListener("mousedown", handler);
     }, []);
 
+    const toggleAll = () => {
+        const allSelected = selectedRegions.length === REGIONS.length;
+
+        const next = allSelected ? [] : [...REGIONS];
+        setSelectedRegions(next);
+
+        const areas = next.flatMap(r => regionsByArea[r] || []);
+        setSelectedRegionView([...new Set(areas)]);
+    };
+
+
     return (
         <div className="filters__group" ref={wrapperRef}>
             <span className="filters__label">Регион:</span>
@@ -57,6 +68,15 @@ export default function FiltersRegions({ regionsByArea, setSelectedRegionView })
 
             {open && (
                 <div className="filters__combo-list">
+                    <label className="filters__combo-item">
+                        <input
+                            type="checkbox"
+                            checked={selectedRegions.length === REGIONS.length}
+                            onChange={toggleAll}
+                        />
+                        Pick all
+                    </label>
+
                     {REGIONS.map(region => (
                         <label key={region} className="filters__combo-item">
                             <input
@@ -69,6 +89,7 @@ export default function FiltersRegions({ regionsByArea, setSelectedRegionView })
                     ))}
                 </div>
             )}
+
         </div>
     );
 }
