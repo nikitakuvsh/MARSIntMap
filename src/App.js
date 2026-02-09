@@ -12,6 +12,7 @@ function App() {
   const [selectedRegionView, setSelectedRegionView] = useState([]);
   const [excelData, setExcelData] = useState([]);
   const [filters, setFilters] = useState({
+      mapChannel: "",
       region: [],
       hsr: [],
       manager: [],

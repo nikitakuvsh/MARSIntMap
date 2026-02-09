@@ -6,6 +6,7 @@ import FiltersRegions from "./FiltersRegions";
 import FiltersManagers from "./FiltersManagers";
 import FiltersMapInformation from "./FiltersMapInformation";
 import FiltersSheets from "./FiltersSheets";
+import FiltersChannels from "./FiltersChannels";
 import './FiltersDiv.css';
 
 export default function FiltersDiv({ onSelectRegion, setSelectedRegion, setSelectedRegionView, excelData, setExcelData, filters, setFilters, tableValues, regionsByArea, sheetNames, setSheetNames, activeSheet, setActiveSheet, workbook, setWorkbook, headerRange }){
@@ -30,6 +31,7 @@ export default function FiltersDiv({ onSelectRegion, setSelectedRegion, setSelec
                     <FiltersSearch onSelectRegion={onSelectRegion}/>
                     <FiltersRegions regionsByArea={regionsByArea} setSelectedRegionView={setSelectedRegionView} />
                     <FiltersPosition excelData={excelData} filters={filters} setFilters={setFilters} setSelectedRegionView={setSelectedRegionView} />
+                    <FiltersChannels filters={filters} setFilters={setFilters} />
                     <FiltersManagers excelData={excelData} filter={filters} setFilters={setFilters} />
                     <FiltersMapInformation filters={filters} setFilters={setFilters} tableValues={tableValues} />    
                 </>
