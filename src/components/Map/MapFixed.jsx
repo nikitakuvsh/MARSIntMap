@@ -89,9 +89,9 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
       if (viewArray.includes(name)) {
         // подсветка активных регионов
         layer.setStyle({
-          fillColor: "rgba(6, 255, 6, 0.8)",
+          fillColor: "rgba(0,0,0,0)",
           color: "#000",
-          weight: 2,
+          weight: 1,
           fillOpacity: 1
         });
       } else {
@@ -99,7 +99,7 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
         layer.setStyle({
           fillColor: "rgba(0,0,0,0)",
           color: "#000",
-          weight: 1,
+          weight: 0,
           fillOpacity: 0
         });
       }
@@ -179,12 +179,46 @@ useEffect(() => {
   const newHsrMarkers = [];
 
   const COLUMN_MAP = {
-    region: r => r["Область"] || r["District"] || r["Регион"] || "",
-    distributor: r => r["Distributor"] || r["Дистр"] || "",
-    hsr: r => r["Region / HSR"] || r["Позиция менеджера"] || "",
-    manager: r => r["Manager"] || r["Менеджер"] || "",
-    territory: r => r["Territory"] || r["Территория"] || "",
+    // Названия регионов/областей
+    region: r => pick(
+      r,
+      "Область",      // новая таблица
+      "District",     // старая таблица
+      "Регион"        // возможные вариации
+    ),
+  
+    // Дистрибьюторы
+    distributor: r => pick(
+      r,
+      "Дистр",        // новая таблица
+      "Дистр(?)",     // старая таблица
+      "Distributor"   // англ. вариант
+    ),
+  
+    // Верхний уровень (HSR или позиция менеджера)
+    hsr: r => pick(
+      r,
+      "Region / HSR",     // старая таблица
+    ),
+  
+    // Менеджер/руководитель
+    manager: r => pick(
+      r,
+      "Позиция менеджера",         // старая таблица
+      "Manager",
+    ),
+  
+    // Территория под менеджером
+    territory: r => pick(
+      r,
+      "Позиция сотрудника", // новая таблица
+      "Territory",          // старая таблица
+      "Территория"          // альтернативное название
+    ),
+
   };
+  
+  
 
   const rowInActiveRegion = r => {
     const excelRegions = resolveRegionSynonyms(COLUMN_MAP.region(r));
@@ -201,7 +235,7 @@ useEffect(() => {
     }
   };
 
-  const drawPolygonFeature = (layer, feature, color, opacity = 1, weight = 1) => {
+  const drawPolygonFeature = (layer, feature, color, opacity = 1, weight = 0) => {
     if (!feature || !feature.geometry || !feature.geometry.coordinates) return;
 
     const coordsArray = feature.geometry.type === "Polygon"
@@ -211,6 +245,7 @@ useEffect(() => {
         : null;
 
     if (!coordsArray) return;
+    const zero = 0;
 
     coordsArray.forEach(ringSet => {
       if (!ringSet || !Array.isArray(ringSet)) return;
@@ -223,6 +258,55 @@ useEffect(() => {
       });
     });
   };
+
+  
+
+  const drawSplitN = (layer, feature, colors) => {
+    const coordsArray =
+      feature.geometry.type === "Polygon"
+        ? [feature.geometry.coordinates]
+        : feature.geometry.coordinates;
+  
+    const parts = colors.length;
+  
+    coordsArray.forEach(ringSet => {
+      ringSet.forEach(ring => {
+        if (!ring || !ring.length) return;
+  
+        const lats = ring.map(([lng, lat]) => lat);
+        const minLat = Math.min(...lats);
+        const maxLat = Math.max(...lats);
+        const step = (maxLat - minLat) / parts;
+  
+        for (let i = 0; i < parts; i++) {
+          const low = minLat + step * i;
+          const high = minLat + step * (i + 1);
+  
+          const partPolygon = ring.map(([lng, lat]) => {
+            if (lat < low) return [lng, low];
+            if (lat > high) return [lng, high];
+            return [lng, lat];
+          });
+  
+          const poly = L.polygon(
+            partPolygon.map(([lng, lat]) => [lat, lng]),
+            {
+              color: "#000",
+              weight: 0,
+              fillColor: colors[i],
+              fillOpacity: 1
+            }
+          ).addTo(layer._map);
+  
+          if (!layer._tempPolygons) layer._tempPolygons = [];
+          layer._tempPolygons.push(poly);
+        }
+      });
+    });
+  
+    layer.setStyle({ fillOpacity: 0, color: "#000", weight: 1 });
+  };
+  
 
   geoJsonRef.current.eachLayer(layer => {
     const name = layer.feature?.properties?.shapeName;
@@ -242,62 +326,100 @@ useEffect(() => {
 
     if (!layer.feature || !layer.feature.geometry) return;
 
-    // === DistributorLayer ===
-if (selectedLayers.includes("DistributorLayer") && isSelected) {
-  const distributors = [...new Set(rows.map(r => pick(r, "Distributor", "Дистр")).filter(Boolean))];
-  if (!distributors.length) return;
+    if (selectedLayers.includes("DistributorLayer") && isSelected) {
 
-  const [d1, d2] = distributors;
-
-  if (!colorsGenerated[d1]) colorsGenerated[d1] = `#${Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, "0")}`;
-  if (d2 && !colorsGenerated[d2]) colorsGenerated[d2] = `#${Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, "0")}`;
-
-  // Масштабируем слой один раз
-  const scaledFeature = safeScale(layer.feature, 1);
-  if (!scaledFeature) return;
-
-  // Если один дистрибьютор — обычная заливка
-  if (distributors.length === 1) {
-    drawPolygonFeature(layer, scaledFeature, colorsGenerated[d1], 1, 1);
-  } else {
-    // Если два дистрибутора — делим по средней линии
-    const coordsArray = scaledFeature.geometry.type === "Polygon"
-      ? [scaledFeature.geometry.coordinates]
-      : scaledFeature.geometry.coordinates;
-
-    coordsArray.forEach(ringSet => {
-      ringSet.forEach(ring => {
-        if (!ring || !ring.length) return;
-
-        const lats = ring.map(([lng, lat]) => lat);
-        const midLat = (Math.max(...lats) + Math.min(...lats)) / 2;
-
-        const upperPolygon = ring.map(([lng, lat]) => [lng, lat >= midLat ? lat : midLat]);
-        const lowerPolygon = ring.map(([lng, lat]) => [lng, lat < midLat ? lat : midLat]);
-
-        const upper = L.polygon(upperPolygon.map(([lng, lat]) => [lat, lng]), {
-          color: "#000",
-          fillColor: colorsGenerated[d1],
-          weight: 0,
-          fillOpacity: 1
-        }).addTo(layer._map);
-
-        const lower = L.polygon(lowerPolygon.map(([lng, lat]) => [lat, lng]), {
-          color: "#000",
-          fillColor: colorsGenerated[d2],
-          weight: 0,
-          fillOpacity: 1
-        }).addTo(layer._map);
-
-        if (!layer._tempPolygons) layer._tempPolygons = [];
-        layer._tempPolygons.push(upper, lower);
+      const distributorsRaw = rows
+        .map(r => pick(r, "Distributor", "Дистр"))
+        .filter(Boolean);
+    
+      const distributors = [...new Set(distributorsRaw)];
+      if (distributors.length === 0) return;
+    
+      // === Цвета ===
+      const colors = [];
+    
+      distributors.forEach(d => {
+        if (!colorsGenerated[d]) {
+          colorsGenerated[d] =
+            "#" + Math.floor(Math.random() * 0xffffff)
+              .toString(16)
+              .padStart(6, "0");
+        }
+        colors.push(colorsGenerated[d]);
       });
-    });
+    
+      const scaledFeature = safeScale(layer.feature, 1);
+      if (!scaledFeature) return;
+    
+      // === Один дистрибьютор — просто заливка ===
+      if (colors.length === 1) {
+        drawPolygonFeature(layer, scaledFeature, colors[0], 1, 1);
+        return;
+      }
+    
+      // === Подготовка координат ===
+      let coordsArray = [];
+    
+      if (scaledFeature.geometry.type === "Polygon") {
+        coordsArray = [scaledFeature.geometry.coordinates];
+      } else {
+        coordsArray = scaledFeature.geometry.coordinates;
+      }
+    
+      // === Деление полигона на N горизонтальных частей ===
+      coordsArray.forEach(ringSet => {
+    
+        ringSet.forEach(ring => {
+          if (!ring || ring.length === 0) return;
+    
+          const lats = ring.map(point => point[1]);
+          const minLat = Math.min(...lats);
+          const maxLat = Math.max(...lats);
+          const step = (maxLat - minLat) / colors.length;
+    
+          for (let i = 0; i < colors.length; i++) {
+    
+            const low = minLat + step * i;
+            const high = minLat + step * (i + 1);
+    
+            const partPolygon = ring.map(point => {
+              const lng = point[0];
+              const lat = point[1];
+    
+              if (lat < low) return [lng, low];
+              if (lat > high) return [lng, high];
+              return [lng, lat];
+            });
+    
+            const leafletCoords = partPolygon.map(p => [p[1], p[0]]);
+    
+            const poly = L.polygon(leafletCoords, {
+              color: "#000",
+              weight: 0,
+              fillColor: colors[i],
+              fillOpacity: 1
+            }).addTo(layer._map);
+    
+            if (!layer._tempPolygons) {
+              layer._tempPolygons = [];
+            }
+    
+            layer._tempPolygons.push(poly);
+          }
+    
+        });
+    
+      });
+    
+      // === Скрываем оригинал ===
+      layer.setStyle({
+        fillOpacity: 0,
+        color: "#000",
+        weight: 1
+      });
+    }
+    
 
-    // скрываем оригинальный слой
-    layer.setStyle({ fillOpacity: 0, color: "#000", weight: 1 });
-  }
-}
 
 
     // === HSRLayer ===
@@ -317,64 +439,112 @@ if (selectedLayers.includes("DistributorLayer") && isSelected) {
     }
 
     // === ManagerLayer + Territory ===
-if (selectedLayers.includes("ManagerLayer") && isSelected) {
-  // Фильтруем менеджеров по выбранному каналу
-  const managerRows = rows.filter(r => {
-    const managerName = COLUMN_MAP.manager(r);
-    if (!managerName) return false;
-
-    if (filters.mapChannel) {
-      return managerName.startsWith(filters.mapChannel);
-    }
-    return true;
-  });
-
-  const managers = [...new Set(managerRows.map(r => COLUMN_MAP.manager(r)).filter(Boolean))];
-  if (!managers.length) return;
-
-  let remainder = layer.feature;
-
-  managers.forEach(m => {
-    const managerFeature = safeScale(remainder, 0.85);
-    if (!managerFeature) return;
-
-    if (!colorsGenerated[m])
-      colorsGenerated[m] = `#${Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, "0")}`;
-
-    drawPolygonFeature(layer, managerFeature, colorsGenerated[m], 1, 1);
-
-    // Обновляем remainder для следующего менеджера
-    try {
-      remainder = turf.difference(remainder, managerFeature) || remainder;
-    } catch (e) {
-      console.warn("turf.difference failed for manager:", m, e);
-    }
-
-    // === TerritoryLayer внутри менеджера ===
-    if (selectedLayers.includes("TerritoryLayer")) {
-      // Территории тоже фильтруем по выбранному каналу через менеджера
-      const territoryRows = managerRows
-        .filter(r => COLUMN_MAP.manager(r) === m)
-        .filter(r => {
-          const terrManager = COLUMN_MAP.manager(r);
-          return !filters.mapChannel || terrManager.startsWith(filters.mapChannel);
-        });
-
-      const territories = [...new Set(territoryRows.map(r => COLUMN_MAP.territory(r)).filter(Boolean))];
-
-      territories.forEach(t => {
-        if (!colorsGenerated[t])
-          colorsGenerated[t] = `#${Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, "0")}`;
-
-        const terrFeature = safeScale(managerFeature, 0.7);
-        if (!terrFeature) return;
-
-        drawPolygonFeature(layer, terrFeature, colorsGenerated[t], 1, 1);
+    if (selectedLayers.includes("ManagerLayer") && isSelected) {
+      const managerRowsFiltered = rows.filter(r => {
+        const managerName = COLUMN_MAP.manager(r);
+        if (!managerName) return false;
+        return !filters.mapChannel || managerName.startsWith(filters.mapChannel);
       });
+    
+      const managers = [...new Set(managerRowsFiltered.map(r => COLUMN_MAP.manager(r)).filter(Boolean))];
+      if (!managers.length) return;
+    
+      const managerColors = managers.map(m => {
+        if (!colorsGenerated[m])
+          colorsGenerated[m] = `#${Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, "0")}`;
+        return colorsGenerated[m];
+      });
+    
+      const scaledFeature = safeScale(layer.feature, 0.85);
+      if (!scaledFeature) return;
+    
+      const drawSplitNReturnFeatures = (feature, colors) => {
+        if (!feature?.geometry?.coordinates?.length) return [];
+      
+        const coordsArray = feature.geometry.type === "Polygon"
+          ? [feature.geometry.coordinates]
+          : feature.geometry.coordinates;
+      
+        const parts = colors.length;
+        const newFeatures = [];
+      
+        coordsArray.forEach(ringSet => {
+          ringSet.forEach(ring => {
+            if (!ring || !ring.length) return;
+      
+            const lats = ring.map(([lng, lat]) => lat);
+            const minLat = Math.min(...lats);
+            const maxLat = Math.max(...lats);
+            const step = (maxLat - minLat) / parts;
+      
+            // ВАЖНО — зазор между частями (магия)
+            const gap = step * 0; // 4% зазора, можно 0.03–0.06 подбирать
+      
+            for (let i = 0; i < parts; i++) {
+              let low = minLat + step * i + gap;
+              let high = minLat + step * (i + 1) - gap;
+      
+              const partPolygon = ring.map(([lng, lat]) => {
+                if (lat < low) return [lng, low];
+                if (lat > high) return [lng, high];
+                return [lng, lat];
+              });
+      
+              newFeatures.push({
+                type: "Feature",
+                geometry: {
+                  type: "Polygon",
+                  coordinates: [partPolygon]
+                },
+                properties: {}
+              });
+            }
+          });
+        });
+      
+        return newFeatures;
+      };
+      
+    
+      // Делим на N менеджеров
+      const managerFeatures = managers.length === 1
+        ? [scaledFeature]
+        : drawSplitNReturnFeatures(scaledFeature, managerColors);
+    
+      managers.forEach((m, idx) => {
+        const managerFeature = managerFeatures[idx];
+        if (!managerFeature) return;
+    
+        drawPolygonFeature(layer, managerFeature, managerColors[idx]);
+    
+        // === Territory внутри менеджера ===
+        if (selectedLayers.includes("TerritoryLayer")) {
+          const territoryRows = managerRowsFiltered.filter(r => COLUMN_MAP.manager(r) === m);
+          const territories = [...new Set(territoryRows.map(r => COLUMN_MAP.territory(r)).filter(Boolean))];
+          if (!territories.length) return;
+    
+          const territoryColors = territories.map(t => {
+            if (!colorsGenerated[t])
+              colorsGenerated[t] = `#${Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, "0")}`;
+            return colorsGenerated[t];
+          });
+    
+          // Масштабируем Territory сильнее, 0.7
+          const territoryFeatureScaled = safeScale(managerFeature, 0.8);
+    
+          const territoryFeatures = territories.length === 1
+            ? [territoryFeatureScaled]
+            : drawSplitNReturnFeatures(territoryFeatureScaled, territoryColors);
+    
+          territoryFeatures.forEach((feat, tIdx) => {
+            drawPolygonFeature(layer, feat, territoryColors[tIdx]);
+          });
+        }
+      });
+    
+      layer.setStyle({ fillOpacity: 0, color: "#000", weight: 1 });
     }
-  });
-}
-
+    
 
     // Прозрачный стиль для остальных
     if (!selectedLayers.some(sl => ["DistributorLayer", "HSRLayer", "ManagerLayer"].includes(sl)) || !isSelected) {
