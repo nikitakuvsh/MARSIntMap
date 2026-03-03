@@ -17,6 +17,7 @@ import { resolveRegionName } from "./hooks/ResolveRegionName";
 import L from "leaflet";
 import regionSynonyms from "./RegionsDataSynomys";
 import * as turf from "@turf/turf";
+import HeatLegends from "./HeatLegends/HeatLegends";
 
 export default function MapLeaflet({ selectedRegion, setSelectedRegion, selectedRegionView = [], setSelectedRegionView, excelData = [], mapDataColumn = null, mapDataColumnValues = [], regionsByArea, setRegionsData, filters, setHeaderRange }) {
   const [geoData, setGeoData] = useState(null);
@@ -43,6 +44,25 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
   const [regionsEditorModalOpen, setRegionsEditorModalOpen] = useState(false);
   const [modalClickedOpen, setModalClickedOpen] = useState(true);
   const [clickedRegionData, setClickedRegionData] = useState(null);
+  const [heatMapOn, setHeatMapOn] = useState(false);
+  const [heatLegendValues, setHeatLegendValues] = useState({ min: 0, avg: 0, max: 0 });
+
+  const CHANNEL_AVGS = {
+    "RKADM": 56905102.23,
+    "Skyline": 74813843.51,
+    "Не Skyline": 17297050.85,
+    "Конкретная территория": 366278664.6,
+    "лидирование в регионе": 2220726461
+  };
+
+  const getHeatColor = (value, avg) => {
+  const ratio = value / avg;
+
+  if (ratio >= 1.5) return "rgba(0,200,0,0.85)";       // высокий — зеленый, насыщенный но не кислотный
+  if (ratio >= 1)   return "rgba(0,120,255,0.85)";     // средний — приятный синий
+  if (ratio >= 0.5) return "rgba(255,200,0,0.85)";     // низкий — мягкий жёлтый
+  return "rgba(200,0,0,0.85)";                         // очень низкий — мягкий красный
+};
 
   console.log("[render] selectedRegion =", selectedRegion);
 
@@ -326,6 +346,72 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
         const excelRegions = resolveRegionSynonyms(COLUMN_MAP.region(r));
         return excelRegions.some(er => layerRegions.includes(er));
       });
+
+      if (!rows.length) return;
+if (heatMapOn) {
+  const channel = filters.salesChannel || "RKADM"; // выбранный канал
+
+  // формируем columnNames для выбранного канала
+  let columnNames = [];
+  switch (channel) {
+    case "Не Skyline":
+      columnNames = ["Grocery Tier 1-2", "SPT Tier 1-2", "E-com Tier 1-2"];
+      break;
+    case "Skyline":
+      columnNames = ["Grocery Tier 3", "Other SS", "Other SPT", "Other E-com", "BTC", "Опт"];
+      break;
+    case "Конкретная территория":
+      columnNames = [
+        "Продажи 5-ka (SO)",
+        "Продажи Magnit (SO)",
+        "Продажи прочих NA c SO (без Чижика!)",
+        "Продажи Чижик по SO",
+        "Продажи RKA c SO",
+        "Продажи в Merch-model (covered)",
+        "# of 5-ka offices",
+        "# of Magnit offices"
+      ];
+      break;
+    case "лидирование в регионе":
+      columnNames = ["Продажи 5-ka (SO) l", "Продажи Magnit (SO) l", "Продажи прочих NA c SO"];
+      break;
+    case "RKADM":
+      columnNames = ["Продажи RKA Tier 1-2","Продажи прочих RKA","5ка (Калининград)","Metro (Калининград)","Зооопторг"];
+      break;
+    default:
+      columnNames = [];
+  }
+
+  // totalValue для цвета
+  const totalValue = rows.reduce((sum, r) => {
+    const rowSum = columnNames.reduce((s, col) => {
+      const val = parseFloat(r[col]?.toString().replace(/,/g, '')) || 0;
+      return s + val;
+    }, 0);
+    return sum + rowSum;
+  }, 0);
+
+  // собираем все ненулевые значения для легенды
+  const allValues = rows.flatMap(r =>
+    columnNames.map(col => parseFloat(r[col]?.toString().replace(/,/g, '')) || 0)
+  ).filter(v => v > 0); // фильтруем нули
+
+  // если есть ненулевые значения, считаем min/avg/max, иначе 0
+  const min = allValues.length ? Math.min(...allValues) : 0;
+  const max = allValues.length ? Math.max(...allValues) : 0;
+  const avg = allValues.length ? allValues.reduce((s, v) => s + v, 0) / allValues.length : 0;
+
+  // передаем в легенду
+  setHeatLegendValues({ min, avg, max });
+
+  // цвет для полигона
+  const avgChannel = CHANNEL_AVGS[channel] || 1;
+  const color = totalValue > 0 ? getHeatColor(totalValue, avgChannel) : null;
+
+  if (color) drawPolygonFeature(layer, layer.feature, color);
+
+  return;
+}
 
       const isSelected = layerRegions.some(r => selectedRegionView.includes(r));
 
@@ -632,7 +718,7 @@ layer.setStyle({ fillOpacity: 0, color: "#000", weight: 1 });
     generateLegends("Territory", "TerritoryLayer", setTerritoryLegends);
 
 
-  }, [excelData, selectedRegionView, selectedLayers, filters.region, filters.hsr, filters.mapChannel, filters.manager, filters.territory]);
+  }, [excelData, selectedRegionView, selectedLayers, filters.region, filters.hsr, filters.mapChannel, filters.manager, filters.territory, filters.salesChannel, heatMapOn]);
 
    const COLUMN_MAP = {
       // Названия регионов/областей
@@ -743,9 +829,10 @@ const handleRegionClick = (feature) => {
 
 
         <ButtonThemeColor />
-        <ButtonHeatMap />
+        <ButtonHeatMap heatOn={heatMapOn} setHeatOn={setHeatMapOn} />
         <ButtonLayers excelData={excelData} distributorLegends={distributorLegends} setDistributorLegends={setDistributorLegends} selectedLayers={selectedLayers} setSelectedLayers={setSelectedLayers} setHSRLegends={setHSRLegends} setManagerLegends={setManagerLegends} setTerritoryLegends={setTerritoryLegends} />
         <MapLegends distributorLegends={distributorLegends} hsrLegends={hsrLegends} managerLegends={managerLegends} territoryLegends={territoryLegends} />
+        {heatMapOn && (<HeatLegends min={heatLegendValues.min} avg={heatLegendValues.avg} max={heatLegendValues.max} />)}
         <RegionsEditorModal openModal={() => setRegionsEditorModalOpen(prev => !prev)} />
         <ButtonBug setHeaderRange={setHeaderRange} />
         <button className="style-map--button" onClick={() => setStyleMap(prev => !prev)} title="Изменить стиль карты"><img src={styleMap ? openedEyeIcon : closedEyeIcon} alt="Глаз" /></button>

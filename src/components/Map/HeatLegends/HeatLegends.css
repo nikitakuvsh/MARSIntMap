@@ -1,0 +1,39 @@
+/* HeatLegends.css */
+.heat-legends {
+  display: flex;
+  flex-direction: column;
+  width: 50%;
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  margin: 10px 0;
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  color: black;
+}
+
+.heat-gradient {
+  height: 20px;
+  width: 100%;
+  border: 1px solid #000;
+  border-radius: 4px;
+  background: linear-gradient(to right, rgba(200,0,0,0.85), rgba(255,200,0,0.85), rgba(0,120,255,0.85), rgba(0,200,0,0.85));
+}
+
+.heat-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+.heat-label {
+  white-space: nowrap;
+}
+
+.avg-label {
+  font-weight: bold;
+  color: blue;
+}
