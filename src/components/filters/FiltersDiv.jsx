@@ -35,7 +35,7 @@ export default function FiltersDiv({ onSelectRegion, setSelectedRegion, setSelec
                     <FiltersSalesChannels filters={filters} setFilters={setFilters} />
                     <FiltersPosition excelData={excelData} filters={filters} setFilters={setFilters} setSelectedRegionView={setSelectedRegionView} />
                     <FiltersManagers excelData={excelData} filter={filters} setFilters={setFilters} />
-                    <FiltersMapInformation filters={filters} setFilters={setFilters} tableValues={tableValues} />    
+                    {/* <FiltersMapInformation filters={filters} setFilters={setFilters} tableValues={tableValues} />  */}
                 </>
             )}
         </div>

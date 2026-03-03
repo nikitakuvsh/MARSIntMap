@@ -18,6 +18,7 @@ import L from "leaflet";
 import regionSynonyms from "./RegionsDataSynomys";
 import * as turf from "@turf/turf";
 import HeatLegends from "./HeatLegends/HeatLegends";
+import ModalMessage from "../ModalMessage/ModalMessage";
 
 export default function MapLeaflet({ selectedRegion, setSelectedRegion, selectedRegionView = [], setSelectedRegionView, excelData = [], mapDataColumn = null, mapDataColumnValues = [], regionsByArea, setRegionsData, filters, setHeaderRange }) {
   const [geoData, setGeoData] = useState(null);
@@ -56,13 +57,13 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
   };
 
   const getHeatColor = (value, avg) => {
-  const ratio = value / avg;
+    const ratio = value / avg;
 
-  if (ratio >= 1.5) return "rgba(0,200,0,0.85)";       // высокий — зеленый, насыщенный но не кислотный
-  if (ratio >= 1)   return "rgba(0,120,255,0.85)";     // средний — приятный синий
-  if (ratio >= 0.5) return "rgba(255,200,0,0.85)";     // низкий — мягкий жёлтый
-  return "rgba(200,0,0,0.85)";                         // очень низкий — мягкий красный
-};
+    if (ratio >= 1.5) return "rgba(0,200,0,0.85)";       // высокий — зеленый, насыщенный но не кислотный
+    if (ratio >= 1) return "rgba(0,120,255,0.85)";     // средний — приятный синий
+    if (ratio >= 0.5) return "rgba(255,200,0,0.85)";     // низкий — мягкий жёлтый
+    return "rgba(200,0,0,0.85)";                         // очень низкий — мягкий красный
+  };
 
   console.log("[render] selectedRegion =", selectedRegion);
 
@@ -242,7 +243,7 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
 
     };
 
-    
+
 
 
     const rowInActiveRegion = r => {
@@ -348,70 +349,71 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
       });
 
       if (!rows.length) return;
-if (heatMapOn) {
-  const channel = filters.salesChannel || "RKADM"; // выбранный канал
+      if (heatMapOn) {
+        const channel = filters.salesChannel || "RKADM"; // выбранный канал
 
-  // формируем columnNames для выбранного канала
-  let columnNames = [];
-  switch (channel) {
-    case "Не Skyline":
-      columnNames = ["Grocery Tier 1-2", "SPT Tier 1-2", "E-com Tier 1-2"];
-      break;
-    case "Skyline":
-      columnNames = ["Grocery Tier 3", "Other SS", "Other SPT", "Other E-com", "BTC", "Опт"];
-      break;
-    case "Конкретная территория":
-      columnNames = [
-        "Продажи 5-ka (SO)",
-        "Продажи Magnit (SO)",
-        "Продажи прочих NA c SO (без Чижика!)",
-        "Продажи Чижик по SO",
-        "Продажи RKA c SO",
-        "Продажи в Merch-model (covered)",
-        "# of 5-ka offices",
-        "# of Magnit offices"
-      ];
-      break;
-    case "лидирование в регионе":
-      columnNames = ["Продажи 5-ka (SO) l", "Продажи Magnit (SO) l", "Продажи прочих NA c SO"];
-      break;
-    case "RKADM":
-      columnNames = ["Продажи RKA Tier 1-2","Продажи прочих RKA","5ка (Калининград)","Metro (Калининград)","Зооопторг"];
-      break;
-    default:
-      columnNames = [];
-  }
+        // формируем columnNames для выбранного канала
+        let columnNames = [];
+        switch (channel) {
+          case "Не Skyline":
+            columnNames = ["Grocery Tier 1-2", "SPT Tier 1-2", "E-com Tier 1-2"];
+            break;
+          case "Skyline":
+            columnNames = ["Grocery Tier 3", "Other SS", "Other SPT", "Other E-com", "BTC", "Опт"];
+            break;
+          case "Конкретная территория":
+            columnNames = [
+              "Продажи 5-ka (SO)",
+              "Продажи Magnit (SO)",
+              "Продажи прочих NA c SO (без Чижика!)",
+              "Продажи Чижик по SO",
+              "Продажи RKA c SO",
+              "Продажи в Merch-model (covered)",
+              "# of 5-ka offices",
+              "# of Magnit offices"
+            ];
+            break;
+          case "лидирование в регионе":
+            columnNames = ["Продажи 5-ka (SO) l", "Продажи Magnit (SO) l", "Продажи прочих NA c SO"];
+            break;
+          case "RKADM":
+            columnNames = ["Продажи RKA Tier 1-2", "Продажи прочих RKA", "5ка (Калининград)", "Metro (Калининград)", "Зооопторг"];
+            break;
+          default:
+            columnNames = [];
+        }
 
-  // totalValue для цвета
-  const totalValue = rows.reduce((sum, r) => {
-    const rowSum = columnNames.reduce((s, col) => {
-      const val = parseFloat(r[col]?.toString().replace(/,/g, '')) || 0;
-      return s + val;
-    }, 0);
-    return sum + rowSum;
-  }, 0);
+        // totalValue для цвета
+        const totalValue = rows.reduce((sum, r) => {
+          const rowSum = columnNames.reduce((s, col) => {
+            const val = parseFloat(r[col]?.toString().replace(/,/g, '')) || 0;
+            return s + val;
+          }, 0);
+          return sum + rowSum;
+        }, 0);
 
-  // собираем все ненулевые значения для легенды
-  const allValues = rows.flatMap(r =>
-    columnNames.map(col => parseFloat(r[col]?.toString().replace(/,/g, '')) || 0)
-  ).filter(v => v > 0); // фильтруем нули
+        // собираем все ненулевые значения для легенды
+        const allValues = rows.flatMap(r =>
+          columnNames.map(col => parseFloat(r[col]?.toString().replace(/,/g, '')) || 0)
+        ).filter(v => v > 0); // фильтруем нули
 
-  // если есть ненулевые значения, считаем min/avg/max, иначе 0
-  const min = allValues.length ? Math.min(...allValues) : 0;
-  const max = allValues.length ? Math.max(...allValues) : 0;
-  const avg = allValues.length ? allValues.reduce((s, v) => s + v, 0) / allValues.length : 0;
+        // если есть ненулевые значения, считаем min/avg/max, иначе 0
+        const min = allValues.length ? Math.min(...allValues) : 0;
+        const max = allValues.length ? Math.max(...allValues) : 0;
+        const avg = allValues.length ? allValues.reduce((s, v) => s + v, 0) / allValues.length : 0;
 
-  // передаем в легенду
-  setHeatLegendValues({ min, avg, max });
+        // передаем в легенду
+        setHeatLegendValues({ min, avg, max });
 
-  // цвет для полигона
-  const avgChannel = CHANNEL_AVGS[channel] || 1;
-  const color = totalValue > 0 ? getHeatColor(totalValue, avgChannel) : null;
-
-  if (color) drawPolygonFeature(layer, layer.feature, color);
-
-  return;
-}
+        // цвет для полигона
+        const avgChannel = CHANNEL_AVGS[channel] || 1;
+        if (totalValue > 0) {
+          const color = getHeatColor(totalValue, avgChannel);
+          drawPolygonFeature(layer, layer.feature, color);
+        }
+        // иначе ничего не делаем
+        return;
+      }
 
       const isSelected = layerRegions.some(r => selectedRegionView.includes(r));
 
@@ -613,49 +615,49 @@ if (heatMapOn) {
           ? [scaledFeature]
           : drawSplitNReturnFeatures(scaledFeature, managerColors);
 
-       managers.forEach((m, idx) => {
-  const managerFeature = managerFeatures[idx];
-  if (!managerFeature) return;
+        managers.forEach((m, idx) => {
+          const managerFeature = managerFeatures[idx];
+          if (!managerFeature) return;
 
-  // Рисуем менеджера
-  drawPolygonFeature(layer, managerFeature, managerColors[idx]);
+          // Рисуем менеджера
+          drawPolygonFeature(layer, managerFeature, managerColors[idx]);
 
-  // === Territory внутри менеджера с фильтрацией ===
-  if (selectedLayers.includes("TerritoryLayer")) {
-    // Фильтруем строки, чтобы оставить только текущего менеджера и выбранные территории
-    const territoryRows = managerRowsFiltered.filter(r => {
-      const territoryRaw = COLUMN_MAP.territory(r);
-      const territoryName = territoryRaw ? String(territoryRaw) : "";
+          // === Territory внутри менеджера с фильтрацией ===
+          if (selectedLayers.includes("TerritoryLayer")) {
+            // Фильтруем строки, чтобы оставить только текущего менеджера и выбранные территории
+            const territoryRows = managerRowsFiltered.filter(r => {
+              const territoryRaw = COLUMN_MAP.territory(r);
+              const territoryName = territoryRaw ? String(territoryRaw) : "";
 
-      const byFiltersTerritory = !filters.territory?.length || filters.territory.includes(territoryName);
+              const byFiltersTerritory = !filters.territory?.length || filters.territory.includes(territoryName);
 
-      return COLUMN_MAP.manager(r) === m && byFiltersTerritory;
-    });
+              return COLUMN_MAP.manager(r) === m && byFiltersTerritory;
+            });
 
-    const territories = [...new Set(territoryRows.map(r => COLUMN_MAP.territory(r)).filter(Boolean))];
-    if (!territories.length) return;
+            const territories = [...new Set(territoryRows.map(r => COLUMN_MAP.territory(r)).filter(Boolean))];
+            if (!territories.length) return;
 
-    const territoryColors = territories.map(t => {
-      if (!colorsGenerated[t])
-        colorsGenerated[t] = `#${Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, "0")}`;
-      return colorsGenerated[t];
-    });
+            const territoryColors = territories.map(t => {
+              if (!colorsGenerated[t])
+                colorsGenerated[t] = `#${Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, "0")}`;
+              return colorsGenerated[t];
+            });
 
-    // Масштабируем Territory сильнее, чем менеджера
-    const territoryFeatureScaled = safeScale(managerFeature, 0.8);
+            // Масштабируем Territory сильнее, чем менеджера
+            const territoryFeatureScaled = safeScale(managerFeature, 0.8);
 
-    const territoryFeatures = territories.length === 1
-      ? [territoryFeatureScaled]
-      : drawSplitNReturnFeatures(territoryFeatureScaled, territoryColors);
+            const territoryFeatures = territories.length === 1
+              ? [territoryFeatureScaled]
+              : drawSplitNReturnFeatures(territoryFeatureScaled, territoryColors);
 
-    territoryFeatures.forEach((feat, tIdx) => {
-      drawPolygonFeature(layer, feat, territoryColors[tIdx]);
-    });
-  }
-});
+            territoryFeatures.forEach((feat, tIdx) => {
+              drawPolygonFeature(layer, feat, territoryColors[tIdx]);
+            });
+          }
+        });
 
-// Скрываем исходный полигон
-layer.setStyle({ fillOpacity: 0, color: "#000", weight: 1 });
+        // Скрываем исходный полигон
+        layer.setStyle({ fillOpacity: 0, color: "#000", weight: 1 });
       }
 
 
@@ -674,28 +676,28 @@ layer.setStyle({ fillOpacity: 0, color: "#000", weight: 1 });
       const legends = excelData
         .filter(rowInActiveRegion)
         .filter(r => {
-  if (selected === "HSRLayer") {
-    return !filters.hsr?.length || filters.hsr.includes(COLUMN_MAP.hsr(r));
-  }
+          if (selected === "HSRLayer") {
+            return !filters.hsr?.length || filters.hsr.includes(COLUMN_MAP.hsr(r));
+          }
 
-  if (selected === "ManagerLayer" || selected === "TerritoryLayer") {
-    const managerRaw = COLUMN_MAP.manager(r);
-    const managerName = managerRaw ? String(managerRaw) : "";
+          if (selected === "ManagerLayer" || selected === "TerritoryLayer") {
+            const managerRaw = COLUMN_MAP.manager(r);
+            const managerName = managerRaw ? String(managerRaw) : "";
 
-    // фильтруем по каналу и выбранным менеджерам
-    const byMapChannel = !filters.mapChannel || managerName.startsWith(filters.mapChannel);
-    const byFiltersManager = !filters.manager?.length || filters.manager.includes(managerName);
-    const territoryRaw = COLUMN_MAP.territory(r);
-    const territoryName = territoryRaw ? String(territoryRaw) : "";
-    const byFiltersTerritory = selected === "TerritoryLayer"
-      ? !filters.territory?.length || filters.territory.includes(territoryName)
-      : true;
+            // фильтруем по каналу и выбранным менеджерам
+            const byMapChannel = !filters.mapChannel || managerName.startsWith(filters.mapChannel);
+            const byFiltersManager = !filters.manager?.length || filters.manager.includes(managerName);
+            const territoryRaw = COLUMN_MAP.territory(r);
+            const territoryName = territoryRaw ? String(territoryRaw) : "";
+            const byFiltersTerritory = selected === "TerritoryLayer"
+              ? !filters.territory?.length || filters.territory.includes(territoryName)
+              : true;
 
-    return byMapChannel && byFiltersManager && byFiltersTerritory;
-  }
+            return byMapChannel && byFiltersManager && byFiltersTerritory;
+          }
 
-  return true;
-})
+          return true;
+        })
         .map(r => {
           if (key === "Distributor") return COLUMN_MAP.distributor(r);
           if (key === "Region / HSR") return COLUMN_MAP.hsr(r);
@@ -720,79 +722,123 @@ layer.setStyle({ fillOpacity: 0, color: "#000", weight: 1 });
 
   }, [excelData, selectedRegionView, selectedLayers, filters.region, filters.hsr, filters.mapChannel, filters.manager, filters.territory, filters.salesChannel, heatMapOn]);
 
-   const COLUMN_MAP = {
-      // Названия регионов/областей
-      region: r => pick(
-        r,
-        "Область",      // новая таблица
-        "District",     // старая таблица
-        "Регион"        // возможные вариации
-      ),
+  const COLUMN_MAP = {
+    // Названия регионов/областей
+    region: r => pick(
+      r,
+      "Область",      // новая таблица
+      "District",     // старая таблица
+      "Регион"        // возможные вариации
+    ),
 
-      // Дистрибьюторы
-      distributor: r => pick(
-        r,
-        "Дистр",        // новая таблица
-        "Дистр(?)",     // старая таблица
-        "Distributor"   // англ. вариант
-      ),
+    // Дистрибьюторы
+    distributor: r => pick(
+      r,
+      "Дистр",        // новая таблица
+      "Дистр(?)",     // старая таблица
+      "Distributor"   // англ. вариант
+    ),
 
-      // Верхний уровень (HSR или позиция менеджера)
-      hsr: r => pick(
-        r,
-        "Region / HSR",     // старая таблица
-      ),
+    // Верхний уровень (HSR или позиция менеджера)
+    hsr: r => pick(
+      r,
+      "Region / HSR",     // старая таблица
+    ),
 
-      // Менеджер/руководитель
-      manager: r => pick(
-        r,
-        "Позиция менеджера",         // старая таблица
-        "Manager",
-      ),
+    // Менеджер/руководитель
+    manager: r => pick(
+      r,
+      "Позиция менеджера",         // старая таблица
+      "Manager",
+    ),
 
-      // Территория под менеджером
-      territory: r => pick(
-        r,
-        "Позиция сотрудника", // новая таблица
-        "Territory",          // старая таблица
-        "Территория"          // альтернативное название
-      ),
+    // Территория под менеджером
+    territory: r => pick(
+      r,
+      "Позиция сотрудника", // новая таблица
+      "Territory",          // старая таблица
+      "Территория"          // альтернативное название
+    ),
 
-    };
+  };
 
 const handleRegionClick = (feature) => {
   const regionName = feature.properties.shapeName;
   const layerRegions = resolveRegionSynonyms(regionName);
 
+  // 🔹 Фильтруем строки по региону и фильтрам
   const rows = excelData.filter(r => {
     const excelRegions = resolveRegionSynonyms(COLUMN_MAP.region(r));
-
-    const regionMatch = excelRegions.some(er =>
-      layerRegions.includes(er)
-    );
-
+    const regionMatch = excelRegions.some(er => layerRegions.includes(er));
     if (!regionMatch) return false;
 
-    // 👇 фильтр по каналу
     if (filters.mapChannel) {
       const managerName = COLUMN_MAP.manager(r) || "";
-      return managerName.startsWith(filters.mapChannel);
+      if (!managerName.startsWith(filters.mapChannel)) return false;
     }
+
+    if (filters.hsr?.length && !filters.hsr.includes(COLUMN_MAP.hsr(r))) return false;
+    if (filters.manager?.length && !filters.manager.includes(COLUMN_MAP.manager(r))) return false;
+    if (filters.territory?.length && !filters.territory.includes(COLUMN_MAP.territory(r))) return false;
+    if (filters.distributor?.length && !filters.distributor.includes(COLUMN_MAP.distributor(r))) return false;
 
     return true;
   });
+
+  // 🔹 Выбираем колонны для выбранного канала
+  const channel = filters.salesChannel || "RKADM";
+  let columnNames = [];
+  switch (channel) {
+    case "Не Skyline":
+      columnNames = ["Grocery Tier 1-2", "SPT Tier 1-2", "E-com Tier 1-2"];
+      break;
+    case "Skyline":
+      columnNames = ["Grocery Tier 3", "Other SS", "Other SPT", "Other E-com", "BTC", "Опт"];
+      break;
+    case "Конкретная территория":
+      columnNames = [
+        "Продажи 5-ka (SO)",
+        "Продажи Magnit (SO)",
+        "Продажи прочих NA c SO (без Чижика!)",
+        "Продажи Чижик по SO",
+        "Продажи RKA c SO",
+        "Продажи в Merch-model (covered)",
+        "# of 5-ka offices",
+        "# of Magnit offices"
+      ];
+      break;
+    case "лидирование в регионе":
+      columnNames = ["Продажи 5-ka (SO) l", "Продажи Magnit (SO) l", "Продажи прочих NA c SO"];
+      break;
+    case "RKADM":
+      columnNames = ["Продажи RKA Tier 1-2", "Продажи прочих RKA", "5ка (Калининград)", "Metro (Калининград)", "Зооопторг"];
+      break;
+    default:
+      columnNames = [];
+  }
+
+  // 🔹 Сумма по выбранным фильтрам
+  const total = rows.reduce((sum, r) => {
+    return sum + columnNames.reduce((s, col) => {
+      return s + (parseFloat(r[col]?.toString().replace(/,/g, "")) || 0);
+    }, 0);
+  }, 0);
+
+  // 🔹 Среднее берём из CHANNEL_AVGS
+  const avg = CHANNEL_AVGS[channel] || 0;
 
   setClickedRegionData({
     region: regionName,
     hsr: [...new Set(rows.map(r => COLUMN_MAP.hsr(r)).filter(Boolean))],
     managers: [...new Set(rows.map(r => COLUMN_MAP.manager(r)).filter(Boolean))],
     territories: [...new Set(rows.map(r => COLUMN_MAP.territory(r)).filter(Boolean))],
-    distributors: [...new Set(rows.map(r => COLUMN_MAP.distributor(r)).filter(Boolean))]
+    distributors: [...new Set(rows.map(r => COLUMN_MAP.distributor(r)).filter(Boolean))],
+    total,
+    avg
   });
 
   setModalClickedOpen(true);
 };
-
 
   return (
     <>
@@ -829,9 +875,9 @@ const handleRegionClick = (feature) => {
 
 
         <ButtonThemeColor />
-        <ButtonHeatMap heatOn={heatMapOn} setHeatOn={setHeatMapOn} />
+        <ButtonHeatMap heatOn={heatMapOn} setHeatOn={() => {setHeatMapOn(prev => !prev); if (!heatMapOn) setModalMessageVisible(true);}} />
         <ButtonLayers excelData={excelData} distributorLegends={distributorLegends} setDistributorLegends={setDistributorLegends} selectedLayers={selectedLayers} setSelectedLayers={setSelectedLayers} setHSRLegends={setHSRLegends} setManagerLegends={setManagerLegends} setTerritoryLegends={setTerritoryLegends} />
-        <MapLegends distributorLegends={distributorLegends} hsrLegends={hsrLegends} managerLegends={managerLegends} territoryLegends={territoryLegends} />
+        {!heatMapOn && (<MapLegends distributorLegends={distributorLegends} hsrLegends={hsrLegends} managerLegends={managerLegends} territoryLegends={territoryLegends} />)}
         {heatMapOn && (<HeatLegends min={heatLegendValues.min} avg={heatLegendValues.avg} max={heatLegendValues.max} />)}
         <RegionsEditorModal openModal={() => setRegionsEditorModalOpen(prev => !prev)} />
         <ButtonBug setHeaderRange={setHeaderRange} />
@@ -843,7 +889,11 @@ const handleRegionClick = (feature) => {
           <ModalClicked
             onClose={() => setModalClickedOpen(false)}
             data={clickedRegionData}
+            filters={filters}
           />
+        )}
+        {modalMessageVisible && (
+          <ModalMessage message={'Не забудьте выключить все слои для корректного отображения'} isError={false} onClose={() => setModalMessageVisible(false)} messageError={''} />
         )}
       </>
     </>

@@ -1,39 +1,80 @@
+/* ModalClicked.css */
+
 .map-modal-overlay {
-    position: absolute;
-    right: 0;
-    top: 10px;
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: 320px;
     z-index: 10000;
+    pointer-events: none; /* карта кликается */
 }
 
 .map-modal-container {
-    display: flex;
+    background: #1b1b1b;
+    color: #f5f5f5;
+    border-radius: 14px;
+    padding: 1.4em;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+    font-family: "Segoe UI", Roboto, Arial, sans-serif;
+    pointer-events: all; /* сама панель кликабельна */
     position: relative;
-    flex-direction: column;
-    background-color: #000;
-    padding: 2em;
-    border-radius: 10px;
+    animation: slideIn 0.2s ease-out;
+}
+
+@keyframes slideIn {
+    from { transform: translateX(20px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
 }
 
 .map-modal__title {
-    font-size: 22px;
+    font-size: 18px;
+    font-weight: 600;
     margin-bottom: 10px;
+    padding-right: 28px; /* место под крестик */
 }
 
 .map-modal__subtitle {
-    font-size: 16px;
-    margin-bottom: 4px;
+    font-size: 14px;
+    margin-bottom: 6px;
+    line-height: 1.4;
+    color: #cfcfcf;
+}
+
+.map-modal__subtitle b {
+    color: #4ea1ff;
+    font-weight: 600;
+}
+
+.map-modal-stats {
+    margin-top: 12px;
+    background: #262626;
+    padding: 10px;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 14px;
+}
+
+.map-modal-stats span:last-child,
+.map-modal-stats span:nth-child(2) {
+    font-weight: 600;
+    color: #ffffff;
 }
 
 .map-modal--close {
     position: absolute;
-    top: 10px;
-    right: 10px;
-    border: 1px solid black;
-    border-radius: 50%;
-    padding: 3px 6px;
-    transition: all 0.15s ease-in-out;
+    top: 8px;
+    right: 8px;
+    border: none;
+    background: transparent;
+    color: #aaa;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.15s ease;
 }
 
 .map-modal--close:hover {
-    background-color: rgb(187, 6, 6);
+    color: #ff5a5a;
+    transform: scale(1.1);
 }

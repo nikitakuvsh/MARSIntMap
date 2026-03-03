@@ -155,11 +155,11 @@ const filteredData = useMemo(() => {
   ================================= */
   const totals = useMemo(() => {
     return {
-      "RKADM млн.": calculateChannelTotal(filteredData, "RKADM") / 1_000_000,
-      "Не Skyline млн.": calculateChannelTotal(filteredData, "Не Skyline") / 1_000_000,
-      "Skyline млн.": calculateChannelTotal(filteredData, "Skyline") / 1_000_000,
-      "Конкретная территория млн.": calculateChannelTotal(filteredData, "Конкретная территория") / 1_000_000,
-      "лидирование в регионе млн.": calculateChannelTotal(filteredData, "лидирование в регионе") / 1_000_000
+      "RKADM": calculateChannelTotal(filteredData, "RKADM") / 1_000_000,
+      "Не Skyline": calculateChannelTotal(filteredData, "Не Skyline") / 1_000_000,
+      "Skyline": calculateChannelTotal(filteredData, "Skyline") / 1_000_000,
+      "Конкретная территория": calculateChannelTotal(filteredData, "Конкретная территория") / 1_000_000,
+      "лидирование в регионе": calculateChannelTotal(filteredData, "лидирование в регионе") / 1_000_000
     };
   }, [filteredData]);
 
