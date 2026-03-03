@@ -13,9 +13,11 @@ function App() {
   const [excelData, setExcelData] = useState([]);
   const [filters, setFilters] = useState({
       mapChannel: "",
+      salesChannel: "",
       region: [],
       hsr: [],
       manager: [],
+      territory: [],
       distributor: []
   });
   const [tableValues, setTableValues] = useState('');
@@ -63,7 +65,7 @@ function App() {
             />
       </div>
       <div className="table__content">
-        <Table excelData={excelData} filters={filters} setTableValues={setTableValues} />
+        <Table excelData={excelData} filters={filters} setTableValues={setTableValues} selectedRegionView={selectedRegionView}/>
       </div>
     </div>
   );

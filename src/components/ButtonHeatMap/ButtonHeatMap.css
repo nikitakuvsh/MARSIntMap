@@ -1,0 +1,14 @@
+.button--heat {
+    position: absolute;
+    z-index: 1000;
+    left: 65px;
+    top: 10px;
+    background: transparent;
+    border: none;
+    transition: all 0.15s ease-in-out;
+}
+
+.heat__icon {
+    width: 42px;
+    height: 42px;
+}

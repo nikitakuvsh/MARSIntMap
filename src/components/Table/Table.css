@@ -1,80 +1,86 @@
-.table {
+.table__content {
+  margin-bottom: 100px;
+}
+
+/* Общий контейнер */
+.table-wrapper {
   width: 100%;
   display: flex;
-  flex-direction: column;
-  gap: 32px;
-  margin-top: 30px;
-  overflow: auto;
+  justify-content: center;
+  padding: 0 20px;
+  box-sizing: border-box;
 }
 
-.table__grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-}
-
-.table__block {
-  background: #fff;
-  border-radius: 14px;
-  padding: 16px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
-}
-
-.table__title {
-  margin-bottom: 12px;
-  font-size: 18px;
-  font-weight: 600;
-  color: #222;
-}
-
-.table__table {
-  width: 100%;
+/* Таблица */
+.custom-table {
   border-collapse: collapse;
+  min-width: 600px;
+  background: #ffffff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  font-family: "Inter", "Segoe UI", sans-serif;
+  transition: 0.3s ease;
 }
 
-.table__head {
-  background: #f5f6f8;
+/* Заголовки */
+.custom-table thead {
+  background: linear-gradient(135deg, #4f46e5, #6366f1);
+  color: #ffffff;
 }
 
-.table__row {
-  transition: background 0.2s ease;
-}
-
-.table__row:hover {
-  background: rgba(0, 0, 0, 0.03);
-}
-
-.table__th {
-  padding: 10px 12px;
-  font-size: 13px;
-  font-weight: 600;
-  text-align: left;
-  border-bottom: 1px solid #e5e5e5;
-  white-space: nowrap;
-  text-align: center;
-}
-
-.table__td {
-  padding: 10px 12px;
+.custom-table th {
+  padding: 18px 24px;
   font-size: 14px;
-  border-bottom: 1px solid #eee;
-  white-space: nowrap;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
   text-align: center;
+  white-space: nowrap;
 }
 
-.table__sales-row {
-  display: flex;
-  gap: 24px;
-  width: 100%;
+/* Тело */
+.custom-table tbody tr {
+  transition: 0.3s ease;
 }
 
-.table__half {
-  flex: 1;
-  min-width: 0;
+.custom-table td {
+  padding: 24px;
+  font-size: 22px;
+  font-weight: 700;
+  text-align: center;
+  color: #111827;
+  background: #f9fafb;
 }
 
-@media (max-width: 900px) {
-  .table__grid {
-    grid-template-columns: 1fr;
+/* Hover эффект */
+.custom-table tbody tr:hover td {
+  background: #eef2ff;
+}
+
+/* Разделители */
+.custom-table th,
+.custom-table td {
+  border-right: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.custom-table th:last-child,
+.custom-table td:last-child {
+  border-right: none;
+}
+
+/* Анимация появления */
+.custom-table {
+  animation: fadeIn 0.4s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

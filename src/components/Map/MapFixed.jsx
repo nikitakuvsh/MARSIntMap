@@ -12,6 +12,7 @@ import closedEyeIcon from '../../images/icons/closedEye.png';
 import openedEyeIcon from '../../images/icons/openedEye.png';
 import RegionsEditorModalContent from "../RegionsEditorModal/RegionsEditorModalContent";
 import ModalClicked from "./ModalClicked/ModalClicked";
+import ButtonHeatMap from "../ButtonHeatMap/ButtonHeatMap";
 import { resolveRegionName } from "./hooks/ResolveRegionName";
 import L from "leaflet";
 import regionSynonyms from "./RegionsDataSynomys";
@@ -456,7 +457,9 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
         const managerRowsFiltered = rows.filter(r => {
           const managerName = COLUMN_MAP.manager(r);
           if (!managerName) return false;
-          return !filters.mapChannel || managerName.startsWith(filters.mapChannel);
+          const byMapChannel = !filters.mapChannel || managerName.startsWith(filters.mapChannel);
+          const byFiltersManager = !filters.manager?.length || filters.manager.includes(managerName);
+          return byMapChannel && byFiltersManager;
         });
 
         const managers = [...new Set(managerRowsFiltered.map(r => COLUMN_MAP.manager(r)).filter(Boolean))];
@@ -524,38 +527,49 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
           ? [scaledFeature]
           : drawSplitNReturnFeatures(scaledFeature, managerColors);
 
-        managers.forEach((m, idx) => {
-          const managerFeature = managerFeatures[idx];
-          if (!managerFeature) return;
+       managers.forEach((m, idx) => {
+  const managerFeature = managerFeatures[idx];
+  if (!managerFeature) return;
 
-          drawPolygonFeature(layer, managerFeature, managerColors[idx]);
+  // Рисуем менеджера
+  drawPolygonFeature(layer, managerFeature, managerColors[idx]);
 
-          // === Territory внутри менеджера ===
-          if (selectedLayers.includes("TerritoryLayer")) {
-            const territoryRows = managerRowsFiltered.filter(r => COLUMN_MAP.manager(r) === m);
-            const territories = [...new Set(territoryRows.map(r => COLUMN_MAP.territory(r)).filter(Boolean))];
-            if (!territories.length) return;
+  // === Territory внутри менеджера с фильтрацией ===
+  if (selectedLayers.includes("TerritoryLayer")) {
+    // Фильтруем строки, чтобы оставить только текущего менеджера и выбранные территории
+    const territoryRows = managerRowsFiltered.filter(r => {
+      const territoryRaw = COLUMN_MAP.territory(r);
+      const territoryName = territoryRaw ? String(territoryRaw) : "";
 
-            const territoryColors = territories.map(t => {
-              if (!colorsGenerated[t])
-                colorsGenerated[t] = `#${Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, "0")}`;
-              return colorsGenerated[t];
-            });
+      const byFiltersTerritory = !filters.territory?.length || filters.territory.includes(territoryName);
 
-            // Масштабируем Territory сильнее, 0.7
-            const territoryFeatureScaled = safeScale(managerFeature, 0.8);
+      return COLUMN_MAP.manager(r) === m && byFiltersTerritory;
+    });
 
-            const territoryFeatures = territories.length === 1
-              ? [territoryFeatureScaled]
-              : drawSplitNReturnFeatures(territoryFeatureScaled, territoryColors);
+    const territories = [...new Set(territoryRows.map(r => COLUMN_MAP.territory(r)).filter(Boolean))];
+    if (!territories.length) return;
 
-            territoryFeatures.forEach((feat, tIdx) => {
-              drawPolygonFeature(layer, feat, territoryColors[tIdx]);
-            });
-          }
-        });
+    const territoryColors = territories.map(t => {
+      if (!colorsGenerated[t])
+        colorsGenerated[t] = `#${Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, "0")}`;
+      return colorsGenerated[t];
+    });
 
-        layer.setStyle({ fillOpacity: 0, color: "#000", weight: 1 });
+    // Масштабируем Territory сильнее, чем менеджера
+    const territoryFeatureScaled = safeScale(managerFeature, 0.8);
+
+    const territoryFeatures = territories.length === 1
+      ? [territoryFeatureScaled]
+      : drawSplitNReturnFeatures(territoryFeatureScaled, territoryColors);
+
+    territoryFeatures.forEach((feat, tIdx) => {
+      drawPolygonFeature(layer, feat, territoryColors[tIdx]);
+    });
+  }
+});
+
+// Скрываем исходный полигон
+layer.setStyle({ fillOpacity: 0, color: "#000", weight: 1 });
       }
 
 
@@ -574,20 +588,28 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
       const legends = excelData
         .filter(rowInActiveRegion)
         .filter(r => {
-          if (selected === "HSRLayer") {
-            return !filters.hsr?.length || filters.hsr.includes(COLUMN_MAP.hsr(r));
-          }
-          if (selected === "ManagerLayer" || selected === "TerritoryLayer") {
-            const managerName = COLUMN_MAP.manager(r);
-            if (!managerName) return false;
-            // фильтруем по выбранному каналу
-            if (filters.mapChannel) {
-              return managerName.startsWith(filters.mapChannel);
-            }
-            return true;
-          }
-          return true;
-        })
+  if (selected === "HSRLayer") {
+    return !filters.hsr?.length || filters.hsr.includes(COLUMN_MAP.hsr(r));
+  }
+
+  if (selected === "ManagerLayer" || selected === "TerritoryLayer") {
+    const managerRaw = COLUMN_MAP.manager(r);
+    const managerName = managerRaw ? String(managerRaw) : "";
+
+    // фильтруем по каналу и выбранным менеджерам
+    const byMapChannel = !filters.mapChannel || managerName.startsWith(filters.mapChannel);
+    const byFiltersManager = !filters.manager?.length || filters.manager.includes(managerName);
+    const territoryRaw = COLUMN_MAP.territory(r);
+    const territoryName = territoryRaw ? String(territoryRaw) : "";
+    const byFiltersTerritory = selected === "TerritoryLayer"
+      ? !filters.territory?.length || filters.territory.includes(territoryName)
+      : true;
+
+    return byMapChannel && byFiltersManager && byFiltersTerritory;
+  }
+
+  return true;
+})
         .map(r => {
           if (key === "Distributor") return COLUMN_MAP.distributor(r);
           if (key === "Region / HSR") return COLUMN_MAP.hsr(r);
@@ -610,7 +632,7 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
     generateLegends("Territory", "TerritoryLayer", setTerritoryLegends);
 
 
-  }, [excelData, selectedRegionView, selectedLayers, filters.region, filters.hsr, filters.mapChannel]);
+  }, [excelData, selectedRegionView, selectedLayers, filters.region, filters.hsr, filters.mapChannel, filters.manager, filters.territory]);
 
    const COLUMN_MAP = {
       // Названия регионов/областей
@@ -708,7 +730,7 @@ const handleRegionClick = (feature) => {
                   layer.on({
                     click: (e) => {
                       console.log("Клик по региону:", name);
-                      handleRegionClick(feature); // твоя функция
+                      handleRegionClick(feature);
                     }
                   });
                 }}
@@ -721,6 +743,7 @@ const handleRegionClick = (feature) => {
 
 
         <ButtonThemeColor />
+        <ButtonHeatMap />
         <ButtonLayers excelData={excelData} distributorLegends={distributorLegends} setDistributorLegends={setDistributorLegends} selectedLayers={selectedLayers} setSelectedLayers={setSelectedLayers} setHSRLegends={setHSRLegends} setManagerLegends={setManagerLegends} setTerritoryLegends={setTerritoryLegends} />
         <MapLegends distributorLegends={distributorLegends} hsrLegends={hsrLegends} managerLegends={managerLegends} territoryLegends={territoryLegends} />
         <RegionsEditorModal openModal={() => setRegionsEditorModalOpen(prev => !prev)} />

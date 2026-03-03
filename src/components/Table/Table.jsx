@@ -1,153 +1,196 @@
 import React, { useMemo, useEffect } from "react";
 import "./Table.css";
+import regionSynonyms from "../Map/RegionsDataSynomys";
 
-export default function Table({ excelData = [], filters, setTableValues }) {
-    const INFO_COLUMNS = [
-        "# of distr offices",
-        "# of RKA offices",
-        "Merch agency",
-        "# of 5-ka offices",
-        "# of Magnit offices",
-    ];
+export default function Table({
+  excelData = [],
+  filters = {},
+  setTableValues,
+  selectedRegionView = []
+}) {
 
-    const SALES_COLUMNS = [
-        "Продажи RKA Tier 1-2",
-        "Продажи прочих RKA SL",
-        "Продажи прочих SL каналов",
-        "Продажи 5-ka generalist",
-        "Продажи Magnit generalist",
-        "Продажи прочих NA c SO generalist",
-        "Продажи Lenta generalist",
-        "Продажи Merch-model",
-    ];
+  /* ================================
+     🔹 Функция для синонимов
+  ================================= */
+  const resolveRegionSynonyms = (region) => {
+    if (!region) return [];
+    const key = String(region).toLowerCase();
+    return regionSynonyms[key] || [region];
+  };
 
-    const allColumns = [...INFO_COLUMNS, ...SALES_COLUMNS];
+  /* ================================
+     🔹 Парсер чисел
+  ================================= */
+  const parseNumber = (value) => {
+    if (!value || value === "-") return 0;
+    return Number(String(value).replace(/\s/g, "").replace(",", ".")) || 0;
+  };
 
-    // =======================
-    // Фильтрация строк
-    // =======================
-    const filteredRows = useMemo(() => {
-        return excelData.filter((row) => {
-            const checkFilter = (filterValue, cellValue) => {
-                if (!filterValue || filterValue === "Total") return true;
-                if (Array.isArray(filterValue)) return filterValue.includes(cellValue);
-                return filterValue === cellValue;
-            };
+  /* ================================
+     🔹 Подготовка разрешённых регионов
+  ================================= */
+  const allowedRegions = useMemo(() => {
+    if (!selectedRegionView?.length) return null;
 
-            return (
-                checkFilter(filters.district, row["District"]) &&
-                checkFilter(filters.manager, row["Manager"]) &&
-                checkFilter(filters.distributor, row["Distributor"]) &&
-                checkFilter(filters.territory, row["Territory"])
-            );
-        });
-    }, [excelData, filters]);
-
-    // =======================
-    // Передача значений таблицы наверх
-    // =======================
-    useEffect(() => {
-        if (!excelData.length) return;
-
-        const values = {};
-        allColumns.forEach(col => {
-            values[col] = filteredRows.map(row => {
-                const val = row[col];
-                return val === null || val === undefined || val === "" ? "—" : val;
-            });
-        });
-
-        setTableValues && setTableValues(values);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [excelData, filters]);
-
-    // =======================
-    // Остальная логика таблицы без изменений
-    // =======================
-    const calculateColumns = (rows, columns) => {
-        const isTotalSelected = Object.values(filters).some(f => f === "Total" || f === "");
-        const result = {};
-
-        columns.forEach(col => {
-            if (!rows.length) {
-                result[col] = "—";
-            } else if (isTotalSelected) {
-                const sum = rows.reduce((acc, row) => {
-                    const val = row[col];
-                    if (typeof val === "number") return acc + val;
-                    return acc;
-                }, 0);
-                result[col] = sum || "—";
-            } else {
-                const val = rows[0][col];
-                result[col] = val === null || val === undefined || val === "" ? "—" : val;
-            }
-        });
-
-        return result;
-    };
-
-    const infoData = useMemo(() => calculateColumns(filteredRows, INFO_COLUMNS), [filteredRows, filters]);
-    const salesData = useMemo(() => calculateColumns(filteredRows, SALES_COLUMNS), [filteredRows, filters]);
-
-    if (!filteredRows.length) return <div className="table__empty">Нет данных для выбранных фильтров</div>;
-
-    const mid = Math.ceil(SALES_COLUMNS.length / 2);
-    const salesPart1 = SALES_COLUMNS.slice(0, mid);
-    const salesPart2 = SALES_COLUMNS.slice(mid);
-
-    return (
-        <div className="table">
-            {/* INFO */}
-            <div className="table__block">
-                <h3 className="table__title">Общая информация</h3>
-                <table className="table__table">
-                    <thead>
-                        <tr className="table__row">
-                            {INFO_COLUMNS.map((col) => <th key={col} className="table__th">{col}</th>)}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr className="table__row">
-                            {INFO_COLUMNS.map((col) => <td key={col} className="table__td">{infoData[col]}</td>)}
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            {/* SALES — PART 1 */}
-            <div className="table__block">
-                <h3 className="table__title">Продажи</h3>
-                <table className="table__table">
-                    <thead>
-                        <tr className="table__row">
-                            {salesPart1.map((col) => <th key={col} className="table__th">{col}</th>)}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr className="table__row">
-                            {salesPart1.map((col) => <td key={col} className="table__td">{salesData[col]}</td>)}
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            {/* SALES — PART 2 */}
-            <div className="table__block">
-                <h3 className="table__title">Продажи</h3>
-                <table className="table__table">
-                    <thead>
-                        <tr className="table__row">
-                            {salesPart2.map((col) => <th key={col} className="table__th">{col}</th>)}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr className="table__row">
-                            {salesPart2.map((col) => <td key={col} className="table__td">{salesData[col]}</td>)}
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+    const resolved = selectedRegionView.flatMap(region =>
+      resolveRegionSynonyms(region)
     );
+
+    console.log("selectedRegionView:", selectedRegionView);
+    console.log("allowedRegions (resolved синонимы):", resolved);
+
+    return resolved;
+  }, [selectedRegionView]);
+
+  /* ================================
+     🔹 Фильтрация данных
+  ================================= */
+  /* ================================
+   🔹 Фильтрация данных
+================================ */
+const filteredData = useMemo(() => {
+  return excelData.filter(row => {
+
+    // Фильтры из панели
+    if (filters.region?.length &&
+        !filters.region.includes(row["Region / HSR"])) {
+      return false;
+    }
+
+    if (filters.manager?.length &&
+        !filters.manager.includes(row["Manager"])) {
+      return false;
+    }
+
+    if (filters.territory?.length &&
+        !filters.territory.includes(row["Territory"])) {
+      return false;
+    }
+
+    if (filters.distributor?.length &&
+        !filters.distributor.includes(row["Distributor"])) {
+      return false;
+    }
+
+    // 🔹 Фильтр по выбранным регионам карты с учётом синонимов
+    if (allowedRegions) {
+      const rowDistrict = row["District"];
+      const rowResolved = resolveRegionSynonyms(rowDistrict);
+      const matches = rowResolved.some(d => allowedRegions.includes(d));
+
+      if (!matches) return false;
+    }
+
+    return true;
+  });
+}, [excelData, filters, allowedRegions]);
+
+  /* ================================
+     🔹 Подсчёт каналов
+  ================================= */
+  const calculateChannelTotal = (data, channel) => {
+    if (!data.length) return 0;
+
+    let columnNames = [];
+
+    switch (channel) {
+      case "Не Skyline":
+        columnNames = ["Grocery Tier 1-2", "SPT Tier 1-2", "E-com Tier 1-2"];
+        break;
+      case "Skyline":
+        columnNames = [
+            "Grocery Tier 3", 
+            "Other SS", 
+            "Other SPT", 
+            "Other E-com", 
+            "BTC", 
+            "Опт"
+        ];
+        break;
+      case "Конкретная территория":
+        columnNames = [
+          "Продажи 5-ka (SO)",
+          "Продажи Magnit (SO)",
+          "Продажи прочих NA c SO (без Чижика!)",
+          "Продажи Чижик по SO",
+          "Продажи RKA c SO",
+          "Продажи в Merch-model (covered)",
+          "# of 5-ka offices",
+          "# of Magnit offices"
+        ];
+        break;
+      case "лидирование в регионе":
+        columnNames = [
+          "Продажи 5-ka (SO) l",
+          "Продажи Magnit (SO) l",
+          "Продажи прочих NA c SO"
+        ];
+        break;
+
+      case "RKADM":
+        columnNames = [
+            "Продажи RKA Tier 1-2",
+            "Продажи прочих RKA",
+            "5ка (Калининград)",
+            "Metro (Калининград)",
+            "Зооопторг"
+        ];
+        break;
+      default:
+        return 0;
+    }
+
+    return data.reduce((total, row) => {
+      const rowSum = columnNames.reduce((sum, col) => {
+        if (!Object.prototype.hasOwnProperty.call(row, col)) return sum;
+        return sum + parseNumber(row[col]);
+      }, 0);
+
+      return total + rowSum;
+    }, 0);
+  };
+
+  /* ================================
+     🔹 Итоговые значения
+  ================================= */
+  const totals = useMemo(() => {
+    return {
+      "RKADM млн.": calculateChannelTotal(filteredData, "RKADM") / 1_000_000,
+      "Не Skyline млн.": calculateChannelTotal(filteredData, "Не Skyline") / 1_000_000,
+      "Skyline млн.": calculateChannelTotal(filteredData, "Skyline") / 1_000_000,
+      "Конкретная территория млн.": calculateChannelTotal(filteredData, "Конкретная территория") / 1_000_000,
+      "лидирование в регионе млн.": calculateChannelTotal(filteredData, "лидирование в регионе") / 1_000_000
+    };
+  }, [filteredData]);
+
+  /* ================================
+     🔹 Передача наружу
+  ================================= */
+  useEffect(() => {
+    if (setTableValues) setTableValues(totals);
+  }, [totals, setTableValues]);
+
+  const channelsToShow = filters.salesChannel ? [filters.salesChannel] : Object.keys(totals);
+
+  /* ================================
+     🔹 Render
+  ================================= */
+  return (
+    <div className="table-wrapper">
+      <table className="custom-table">
+        <thead>
+          <tr>
+            {channelsToShow.map(channel => <th key={channel}>{channel}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            {channelsToShow.map(channel => (
+              <td key={channel}>{totals[channel]?.toLocaleString("ru-RU")}</td>
+            ))}
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
 }
