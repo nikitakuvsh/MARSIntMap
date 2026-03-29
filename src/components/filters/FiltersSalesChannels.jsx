@@ -1,7 +1,8 @@
 import React from "react";
 
 export default function FiltersSalesChannels({ filters, setFilters }) {
-  const options = ["RKADM", "Не Skyline", "Skyline", "Конкретная территория", "лидирование в регионе"];
+  // const options = ["RKADM", "Не Skyline", "Skyline", "Конкретная территория", "лидирование в регионе"];
+  const options = ["RKA", "Non-Skyline", "Skyline", "SO NA (w/o Chizhik)", "SO RKA (execution)", "Merch-model SO", "NA Leading", "RKA Leading"];
 
   return (
     <div className="filters__group">

@@ -44,6 +44,7 @@ function App() {
             setRegionsData={setRegionsData}
             filters={filters}
             setHeaderRange={setHeaderRange}
+            headerRange={headerRange}
           />
           <FiltersDiv 
             onSelectRegion={setSelectedRegion} 

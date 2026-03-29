@@ -1,6 +1,6 @@
 import './ModalClicked.css';
 
-export default function ModalClicked({ data, filters, onClose }) {
+export default function ModalClicked({ data = [], filters, onClose }) {
   if (!data) return null;
 
   return (
@@ -32,8 +32,8 @@ export default function ModalClicked({ data, filters, onClose }) {
 
         <div className="map-modal-stats">
           <span><b>{filters.salesChannel || "Канал"}:</b></span>
-          <span>Сумма — {data.total.toLocaleString("ru-RU")}</span>
-          <span>Среднее — {data.avg.toLocaleString("ru-RU")}</span>
+          <span>Сумма — {data.total != null ? data.total.toLocaleString("ru-RU") : "???"}</span>
+          <span>Среднее — {data.avg != null ? data.avg.toLocaleString("ru-RU") : "???"}</span>
         </div>
       </div>
     </div>

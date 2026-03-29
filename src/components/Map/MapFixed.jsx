@@ -20,7 +20,7 @@ import * as turf from "@turf/turf";
 import HeatLegends from "./HeatLegends/HeatLegends";
 import ModalMessage from "../ModalMessage/ModalMessage";
 
-export default function MapLeaflet({ selectedRegion, setSelectedRegion, selectedRegionView = [], setSelectedRegionView, excelData = [], mapDataColumn = null, mapDataColumnValues = [], regionsByArea, setRegionsData, filters, setHeaderRange }) {
+export default function MapLeaflet({ selectedRegion, setSelectedRegion, selectedRegionView = [], setSelectedRegionView, excelData = [], mapDataColumn = null, mapDataColumnValues = [], regionsByArea, setRegionsData, filters, setHeaderRange, headerRange }) {
   const [geoData, setGeoData] = useState(null);
   const redColor = "rgba(255, 0, 0, 0.82)";
   const greenColor = "rgba(6, 255, 6, 0.8)";
@@ -35,7 +35,6 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
   const [managerLegends, setManagerLegends] = useState([]);
   const [territoryLegends, setTerritoryLegends] = useState([]);
   const [selectedLayers, setSelectedLayers] = useState([]);
-  const [avgSell, setAvgSell] = useState(0);
   const hsrPatterns = {};
   const [visibleGeoData, setVisibleGeoData] = useState(null);
   const geoJsonRef = useRef(null);
@@ -48,13 +47,50 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
   const [heatMapOn, setHeatMapOn] = useState(false);
   const [heatLegendValues, setHeatLegendValues] = useState({ min: 0, avg: 0, max: 0 });
 
-  const CHANNEL_AVGS = {
-    "RKADM": 56905102.23,
-    "Skyline": 74813843.51,
-    "Не Skyline": 17297050.85,
-    "Конкретная территория": 366278664.6,
-    "лидирование в регионе": 2220726461
+
+  const parseNumber = (val) => {
+    if (val === null || val === undefined || val === "") return 0;
+
+    return parseFloat(
+      val.toString().replace(/\s/g, '').replace(',', '.')
+    ) || 0;
   };
+
+function getChannelAvgsFromData(excelData) {
+  if (!excelData?.length) return {};
+
+  // Найдём первую строку, где есть RKA avg (или любая другая колонка с avg)
+  const avgRow = excelData.find(row => "RKA avg" in row);
+  if (!avgRow) return {};
+
+  const columns = [
+    "RKA avg",
+    "Non-Skyline avg",
+    "Skyline avg",
+    "SO NA (w/o Chizhik) avg",
+    "SO RKA (execution) avg",
+    "Merch-model SO avg",
+    "NA Leading avg",
+    "RKA Leading avg"
+  ];
+
+  const CHANNEL_AVGS = {};
+
+  columns.forEach(col => {
+    let val = avgRow[col];
+    if (typeof val === "string") {
+      val = parseFloat(val.replace(/\s/g, "").replace(",", ".")) || 0;
+    }
+    CHANNEL_AVGS[col] = val ?? 0;
+  });
+
+  return CHANNEL_AVGS;
+}
+
+const CHANNEL_AVGS = getChannelAvgsFromData(excelData);
+
+console.log("CHANNEL_AVGS =", CHANNEL_AVGS);
+console.log("headerRange", headerRange);
 
   const getHeatColor = (value, avg) => {
     const ratio = value / avg;
@@ -278,7 +314,8 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
         ringSet.forEach(ring => {
           if (!ring || !ring.length) return;
           const leafletCoords = ring.map(([lng, lat]) => [lat, lng]);
-          const poly = L.polygon(leafletCoords, { fillColor: color, color: "#000000", weight, fillOpacity: 1 }).addTo(layer._map);
+          console.log('COLOR', layer.feature, color);
+          const poly = L.polygon(leafletCoords, { fillColor: color, color: color, weight, fillOpacity: 1 }).addTo(layer._map);
           poly.on("click", () => {
             console.log("Клик по кастомному региону 2");
             handleRegionClick(layer.feature);
@@ -288,55 +325,6 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
         });
       });
     };
-
-
-
-    const drawSplitN = (layer, feature, colors) => {
-      const coordsArray =
-        feature.geometry.type === "Polygon"
-          ? [feature.geometry.coordinates]
-          : feature.geometry.coordinates;
-
-      const parts = colors.length;
-
-      coordsArray.forEach(ringSet => {
-        ringSet.forEach(ring => {
-          if (!ring || !ring.length) return;
-
-          const lats = ring.map(([lng, lat]) => lat);
-          const minLat = Math.min(...lats);
-          const maxLat = Math.max(...lats);
-          const step = (maxLat - minLat) / parts;
-
-          for (let i = 0; i < parts; i++) {
-            const low = minLat + step * i;
-            const high = minLat + step * (i + 1);
-
-            const partPolygon = ring.map(([lng, lat]) => {
-              if (lat < low) return [lng, low];
-              if (lat > high) return [lng, high];
-              return [lng, lat];
-            });
-
-            const poly = L.polygon(
-              partPolygon.map(([lng, lat]) => [lat, lng]),
-              {
-                color: "#000",
-                weight: 0,
-                fillColor: colors[i],
-                fillOpacity: 1
-              }
-            ).addTo(layer._map);
-
-            if (!layer._tempPolygons) layer._tempPolygons = [];
-            layer._tempPolygons.push(poly);
-          }
-        });
-      });
-
-      layer.setStyle({ fillOpacity: 0, color: "#000", weight: 1 });
-    };
-
 
     geoJsonRef.current.eachLayer(layer => {
       const name = layer.feature?.properties?.shapeName;
@@ -350,63 +338,75 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
 
       if (!rows.length) return;
       if (heatMapOn) {
-        const channel = filters.salesChannel || "RKADM"; // выбранный канал
+        if (layer._tempPolygons) layer._tempPolygons.forEach(p => p.remove());
+      layer._tempPolygons = [];
+
+      if (!layer.feature || !layer.feature.geometry) return;
+        const channel = filters.salesChannel || "RKA"; // выбранный канал
 
         // формируем columnNames для выбранного канала
         let columnNames = [];
-        switch (channel) {
-          case "Не Skyline":
-            columnNames = ["Grocery Tier 1-2", "SPT Tier 1-2", "E-com Tier 1-2"];
-            break;
-          case "Skyline":
-            columnNames = ["Grocery Tier 3", "Other SS", "Other SPT", "Other E-com", "BTC", "Опт"];
-            break;
-          case "Конкретная территория":
-            columnNames = [
-              "Продажи 5-ka (SO)",
-              "Продажи Magnit (SO)",
-              "Продажи прочих NA c SO (без Чижика!)",
-              "Продажи Чижик по SO",
-              "Продажи RKA c SO",
-              "Продажи в Merch-model (covered)",
-              "# of 5-ka offices",
-              "# of Magnit offices"
-            ];
-            break;
-          case "лидирование в регионе":
-            columnNames = ["Продажи 5-ka (SO) l", "Продажи Magnit (SO) l", "Продажи прочих NA c SO"];
-            break;
-          case "RKADM":
-            columnNames = ["Продажи RKA Tier 1-2", "Продажи прочих RKA", "5ка (Калининград)", "Metro (Калининград)", "Зооопторг"];
-            break;
-          default:
-            columnNames = [];
-        }
+          switch (channel) {
+            case "Non-Skyline":
+              columnNames = ["Non-Skyline"];
+              break;
+            case "Skyline":
+              columnNames = ["Skyline"];
+              break;
+            case "SO NA (w/o Chizhik)":
+              columnNames = ["SO NA (w/o Chizhik)"]
+              break;
+            case "SO RKA (execution)":
+              columnNames = ["SO RKA (execution)"];
+              break;
+            case "RKA":
+              columnNames = ["RKA"];
+              break;
+            case "Merch-model SO":
+              columnNames = ["Merch-model SO"];
+              break;
+            case "NA Leading":
+              columnNames = ["NA Leading"];
+              break;
+            case "RKA Leading":
+              columnNames = ["RKA Leading"];
+              break;
+            default:
+              columnNames = [];
+          }
 
         // totalValue для цвета
+        console.log("ROW SAMPLE", rows[0]);
+        console.log("VALUE", rows[0]?.["SO NA (w/o Chizhik)"]);
         const totalValue = rows.reduce((sum, r) => {
           const rowSum = columnNames.reduce((s, col) => {
-            const val = parseFloat(r[col]?.toString().replace(/,/g, '')) || 0;
+            // const val = parseFloat(r[col]?.toString().replace(/,/g, '')) || 0;
+            const val = parseNumber(r[col]);
             return s + val;
           }, 0);
           return sum + rowSum;
         }, 0);
 
+        console.log("total Value = ", totalValue);
+
         // собираем все ненулевые значения для легенды
         const allValues = rows.flatMap(r =>
-          columnNames.map(col => parseFloat(r[col]?.toString().replace(/,/g, '')) || 0)
+          columnNames.map(col => parseNumber(r[col]) || 0)
         ).filter(v => v > 0); // фильтруем нули
 
+        const allValuesGlobal = excelData.flatMap(r=> columnNames.map(col => parseNumber(r[col]))).filter(v => v > 0);
+
         // если есть ненулевые значения, считаем min/avg/max, иначе 0
-        const min = allValues.length ? Math.min(...allValues) : 0;
-        const max = allValues.length ? Math.max(...allValues) : 0;
-        const avg = allValues.length ? allValues.reduce((s, v) => s + v, 0) / allValues.length : 0;
+        const min = allValuesGlobal.length ? Math.min(...allValuesGlobal) : 0;
+        const max = allValuesGlobal.length ? Math.max(...allValuesGlobal) : 0;
+        const avg = allValuesGlobal.length ? allValuesGlobal.reduce((s,v) => s + v, 0) / allValuesGlobal.length : 0;
 
         // передаем в легенду
         setHeatLegendValues({ min, avg, max });
 
         // цвет для полигона
-        const avgChannel = CHANNEL_AVGS[channel] || 1;
+        const avgKey = channel + " avg";
+        const avgChannel = CHANNEL_AVGS[avgKey] || 1;
         if (totalValue > 0) {
           const color = getHeatColor(totalValue, avgChannel);
           drawPolygonFeature(layer, layer.feature, color);
@@ -643,6 +643,8 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
               return colorsGenerated[t];
             });
 
+            console.log('territoryColors = ', territoryColors);
+
             // Масштабируем Territory сильнее, чем менеджера
             const territoryFeatureScaled = safeScale(managerFeature, 0.8);
 
@@ -651,7 +653,8 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
               : drawSplitNReturnFeatures(territoryFeatureScaled, territoryColors);
 
             territoryFeatures.forEach((feat, tIdx) => {
-              drawPolygonFeature(layer, feat, territoryColors[tIdx]);
+              const color = territoryColors[tIdx % territoryColors.length];
+              drawPolygonFeature(layer, feat, color);
             });
           }
         });
@@ -786,57 +789,45 @@ const handleRegionClick = (feature) => {
   });
 
   // 🔹 Выбираем колонны для выбранного канала
-  const channel = filters.salesChannel || "RKADM";
+  const channel = filters.salesChannel || "RKA";
   let columnNames = [];
   switch (channel) {
-    case "Не Skyline":
-      columnNames = ["Grocery Tier 1-2", "SPT Tier 1-2", "E-com Tier 1-2"];
-      break;
-    case "Skyline":
-      columnNames = ["Grocery Tier 3", "Other SS", "Other SPT", "Other E-com", "BTC", "Опт"];
-      break;
-    case "Конкретная территория":
-      columnNames = [
-        "Продажи 5-ka (SO)",
-        "Продажи Magnit (SO)",
-        "Продажи прочих NA c SO (без Чижика!)",
-        "Продажи Чижик по SO",
-        "Продажи RKA c SO",
-        "Продажи в Merch-model (covered)",
-        "# of 5-ka offices",
-        "# of Magnit offices"
-      ];
-      break;
-    case "лидирование в регионе":
-      columnNames = ["Продажи 5-ka (SO) l", "Продажи Magnit (SO) l", "Продажи прочих NA c SO"];
-      break;
-    case "RKADM":
-      columnNames = ["Продажи RKA Tier 1-2", "Продажи прочих RKA", "5ка (Калининград)", "Metro (Калининград)", "Зооопторг"];
-      break;
-    default:
-      columnNames = [];
+    case "Non-Skyline": columnNames = ["Non-Skyline"]; break;
+    case "Skyline": columnNames = ["Skyline"]; break;
+    case "SO NA (w/o Chizhik)": columnNames = ["SO NA (w/o Chizhik)"]; break;
+    case "SO RKA (execution)": columnNames = ["SO RKA (execution)"]; break;
+    case "RKA": columnNames = ["RKA"]; break;
+    case "Merch-model SO": columnNames = ["Merch-model SO"]; break;
+    case "NA Leading": columnNames = ["NA Leading"]; break;
+    case "RKA Leading": columnNames = ["RKA Leading"]; break;
+    default: columnNames = [];
   }
 
   // 🔹 Сумма по выбранным фильтрам
   const total = rows.reduce((sum, r) => {
-    return sum + columnNames.reduce((s, col) => {
-      return s + (parseFloat(r[col]?.toString().replace(/,/g, "")) || 0);
-    }, 0);
+    return sum + columnNames.reduce((s, col) => s + (parseNumber(r[col]) || 0), 0);
   }, 0);
 
   // 🔹 Среднее берём из CHANNEL_AVGS
-  const avg = CHANNEL_AVGS[channel] || 0;
+  const avgKey = channel + " avg";
+  const avg = CHANNEL_AVGS[avgKey] ?? 0;
 
-  setClickedRegionData({
+  // 🔹 Формируем объект для модалки
+  const regionData = {
     region: regionName,
     hsr: [...new Set(rows.map(r => COLUMN_MAP.hsr(r)).filter(Boolean))],
     managers: [...new Set(rows.map(r => COLUMN_MAP.manager(r)).filter(Boolean))],
     territories: [...new Set(rows.map(r => COLUMN_MAP.territory(r)).filter(Boolean))],
-    distributors: [...new Set(rows.map(r => COLUMN_MAP.distributor(r)).filter(Boolean))],
-    total,
-    avg
-  });
+    distributors: [...new Set(rows.map(r => COLUMN_MAP.distributor(r)).filter(Boolean))]
+  };
 
+  // Добавляем total и avg только если total больше 0
+  if (total > 0) {
+    regionData.total = total;
+    regionData.avg = avg;
+  }
+
+  setClickedRegionData(regionData);
   setModalClickedOpen(true);
 };
 
