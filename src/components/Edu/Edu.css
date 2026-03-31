@@ -1,0 +1,11 @@
+.edu__container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.edu__image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}

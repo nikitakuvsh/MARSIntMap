@@ -1,4 +1,5 @@
 import eduImage from '../../images/./pictures/edu.png';
+import './Edu.css';
 
 export default function Edu({ onClose }) {
     const handleClick = () => {
