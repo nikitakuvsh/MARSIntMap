@@ -260,6 +260,7 @@ console.log("headerRange", headerRange);
       hsr: r => pick(
         r,
         "Region / HSR",     // старая таблица
+        "Регион",
       ),
 
       // Менеджер/руководитель
@@ -315,7 +316,7 @@ console.log("headerRange", headerRange);
           if (!ring || !ring.length) return;
           const leafletCoords = ring.map(([lng, lat]) => [lat, lng]);
           console.log('COLOR', layer.feature, color);
-          const poly = L.polygon(leafletCoords, { fillColor: color, color: color, weight, fillOpacity: 1 }).addTo(layer._map);
+          const poly = L.polygon(leafletCoords, { fillColor: color, color: "#000", weight, fillOpacity: 1 }).addTo(layer._map);
           poly.on("click", () => {
             console.log("Клик по кастомному региону 2");
             handleRegionClick(layer.feature);
