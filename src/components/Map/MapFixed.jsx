@@ -20,7 +20,7 @@ import * as turf from "@turf/turf";
 import HeatLegends from "./HeatLegends/HeatLegends";
 import ModalMessage from "../ModalMessage/ModalMessage";
 
-export default function MapLeaflet({ selectedRegion, setSelectedRegion, selectedRegionView = [], setSelectedRegionView, excelData = [], mapDataColumn = null, mapDataColumnValues = [], regionsByArea, setRegionsData, filters, setHeaderRange, headerRange }) {
+export default function MapLeaflet({ selectedRegion, setSelectedRegion, selectedRegionView = [], setSelectedRegionView, excelData = [], mapDataColumn = null, mapDataColumnValues = [], regionsByArea, setRegionsData, filters, setHeaderRange, headerRange, showEdu }) {
   const [geoData, setGeoData] = useState(null);
   const redColor = "rgba(255, 0, 0, 0.82)";
   const greenColor = "rgba(6, 255, 6, 0.8)";

@@ -5,20 +5,21 @@ import Table from "./components/Table/Table";
 import Loading from "./components/Loading/Loading";
 import regionsByArea from "./components/Map/RegionsData";
 import MapFixed from "./components/Map/MapFixed";
-import './styles.css';  
+import Edu from "./components/Edu/Edu";
+import './styles.css';
 
 function App() {
   const [selectedRegion, setSelectedRegion] = useState("");
   const [selectedRegionView, setSelectedRegionView] = useState([]);
   const [excelData, setExcelData] = useState([]);
   const [filters, setFilters] = useState({
-      mapChannel: "",
-      salesChannel: "",
-      region: [],
-      hsr: [],
-      manager: [],
-      territory: [],
-      distributor: []
+    mapChannel: "",
+    salesChannel: "",
+    region: [],
+    hsr: [],
+    manager: [],
+    territory: [],
+    distributor: []
   });
   const [tableValues, setTableValues] = useState('');
   const [loadingState, setLoadingState] = useState(true);
@@ -27,46 +28,54 @@ function App() {
   const [sheetNames, setSheetNames] = useState([]);
   const [activeSheet, setActiveSheet] = useState("");
   const [headerRange, setHeaderRange] = useState(0);
+  const [showEdu, setShowEdu] = useState(localStorage.getItem('intMapShowEdu') !== 'false');
 
 
   return (
     <div className={`app ${loadingState ? 'pointer--none' : ''}`}>
       <Loading loadingState={loadingState} stopLoading={() => setLoadingState(false)} />
+      {showEdu && <Edu onClose={() => setShowEdu(false)} />}
+
       <div className='page__content'>
-          <MapFixed
-            selectedRegion={selectedRegion}
-            setSelectedRegion={setSelectedRegion}
-            selectedRegionView={selectedRegionView}
-            excelData={excelData}
-            mapDataColumn={filters.mapDataColumn}
-            mapDataColumnValues={filters.mapDataColumn ? tableValues[filters.mapDataColumn] : []}
-            regionsByArea={regionsData}
-            setRegionsData={setRegionsData}
-            filters={filters}
-            setHeaderRange={setHeaderRange}
-            headerRange={headerRange}
-          />
-          <FiltersDiv 
-            onSelectRegion={setSelectedRegion} 
-            setSelectedRegion={setSelectedRegion} 
-            setSelectedRegionView={setSelectedRegionView} 
-            excelData={excelData} 
-            setExcelData={setExcelData} 
-            filters={filters} 
-            setFilters={setFilters} 
-            tableValues={tableValues}
-            regionsByArea={regionsData}
-            workbook={workbook} 
-            setWorkbook={setWorkbook} 
-            sheetNames={sheetNames}
-            setSheetNames={setSheetNames}
-            activeSheet={activeSheet}
-            setActiveSheet={setActiveSheet}
-            headerRange={headerRange}
+        {!showEdu && (
+          <>
+            <MapFixed
+              selectedRegion={selectedRegion}
+              setSelectedRegion={setSelectedRegion}
+              selectedRegionView={selectedRegionView}
+              excelData={excelData}
+              mapDataColumn={filters.mapDataColumn}
+              mapDataColumnValues={filters.mapDataColumn ? tableValues[filters.mapDataColumn] : []}
+              regionsByArea={regionsData}
+              setRegionsData={setRegionsData}
+              filters={filters}
+              setHeaderRange={setHeaderRange}
+              headerRange={headerRange}
+              showEdu={showEdu}
             />
+            <FiltersDiv
+              onSelectRegion={setSelectedRegion}
+              setSelectedRegion={setSelectedRegion}
+              setSelectedRegionView={setSelectedRegionView}
+              excelData={excelData}
+              setExcelData={setExcelData}
+              filters={filters}
+              setFilters={setFilters}
+              tableValues={tableValues}
+              regionsByArea={regionsData}
+              workbook={workbook}
+              setWorkbook={setWorkbook}
+              sheetNames={sheetNames}
+              setSheetNames={setSheetNames}
+              activeSheet={activeSheet}
+              setActiveSheet={setActiveSheet}
+              headerRange={headerRange}
+            />
+          </>
+        )}
       </div>
       <div className="table__content">
-        <Table excelData={excelData} filters={filters} setTableValues={setTableValues} selectedRegionView={selectedRegionView}/>
+        {!showEdu && <Table excelData={excelData} filters={filters} setTableValues={setTableValues} selectedRegionView={selectedRegionView} />}
       </div>
     </div>
   );

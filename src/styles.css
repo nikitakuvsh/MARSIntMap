@@ -107,3 +107,7 @@ select, button {
     pointer-events: none !important;
     cursor: not-allowed;
 }
+
+.hidden-comp {
+    display: none !important;
+}
