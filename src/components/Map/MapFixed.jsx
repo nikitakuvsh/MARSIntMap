@@ -22,10 +22,7 @@ import ModalMessage from "../ModalMessage/ModalMessage";
 
 export default function MapLeaflet({ selectedRegion, setSelectedRegion, selectedRegionView = [], setSelectedRegionView, excelData = [], mapDataColumn = null, mapDataColumnValues = [], regionsByArea, setRegionsData, filters, setHeaderRange, headerRange, showEdu }) {
   const [geoData, setGeoData] = useState(null);
-  const redColor = "rgba(255, 0, 0, 0.82)";
   const greenColor = "rgba(6, 255, 6, 0.8)";
-  const yellowColor = "rgba(242, 231, 0, 0.82)";
-  const [backgroundColor, setBackgroundColor] = useState(greenColor);
   const [activeRegions, setActiveRegions] = useState([]);
   const activeRegionsRef = useRef([]);
   const [modalMessageVisible, setModalMessageVisible] = useState(false);
@@ -35,7 +32,6 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
   const [managerLegends, setManagerLegends] = useState([]);
   const [territoryLegends, setTerritoryLegends] = useState([]);
   const [selectedLayers, setSelectedLayers] = useState([]);
-  const hsrPatterns = {};
   const [visibleGeoData, setVisibleGeoData] = useState(null);
   const geoJsonRef = useRef(null);
   const [styleMap, setStyleMap] = useState(true);
@@ -47,6 +43,11 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
   const [heatMapOn, setHeatMapOn] = useState(false);
   const [heatLegendValues, setHeatLegendValues] = useState({ min: 0, avg: 0, max: 0 });
 
+  const CHANNEL_GROUPS = {
+    DDM: ["DDM", "ASM"],
+    TDM: ["TDM"],
+    RADM: ["RADM"],
+  }
 
   const parseNumber = (val) => {
     if (val === null || val === undefined || val === "") return 0;
@@ -56,41 +57,44 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
     ) || 0;
   };
 
-function getChannelAvgsFromData(excelData) {
-  if (!excelData?.length) return {};
+  function getChannelAvgsFromData(excelData) {
+    if (!excelData?.length) return {};
 
-  // Найдём первую строку, где есть RKA avg (или любая другая колонка с avg)
-  const avgRow = excelData.find(row => "RKA avg" in row);
-  if (!avgRow) return {};
+    // Найдём первую строку, где есть RKA avg (или любая другая колонка с avg)
+    const avgRow = excelData.find(row => "RKA avg" in row);
+    if (!avgRow) return {};
 
-  const columns = [
-    "RKA avg",
-    "Non-Skyline avg",
-    "Skyline avg",
-    "SO NA (w/o Chizhik) avg",
-    "SO RKA (execution) avg",
-    "Merch-model SO avg",
-    "NA Leading avg",
-    "RKA Leading avg"
-  ];
+    const columns = [
+      "RKA avg",
+      "Non-Skyline avg",
+      "Skyline avg",
+      "SO NA (w/o Chizhik) avg",
+      "SO RKA (execution) avg",
+      "Merch-model SO avg",
+      "NA Leading avg",
+      "RKA Leading avg",
+      "general rka avg",
+      "general distr trade avg",
+      "general execution avg"
+    ];
 
-  const CHANNEL_AVGS = {};
+    const CHANNEL_AVGS = {};
 
-  columns.forEach(col => {
-    let val = avgRow[col];
-    if (typeof val === "string") {
-      val = parseFloat(val.replace(/\s/g, "").replace(",", ".")) || 0;
-    }
-    CHANNEL_AVGS[col] = val ?? 0;
-  });
+    columns.forEach(col => {
+      let val = avgRow[col];
+      if (typeof val === "string") {
+        val = parseFloat(val.replace(/\s/g, "").replace(",", ".")) || 0;
+      }
+      CHANNEL_AVGS[col] = val ?? 0;
+    });
 
-  return CHANNEL_AVGS;
-}
+    return CHANNEL_AVGS;
+  }
 
-const CHANNEL_AVGS = getChannelAvgsFromData(excelData);
+  const CHANNEL_AVGS = getChannelAvgsFromData(excelData);
 
-console.log("CHANNEL_AVGS =", CHANNEL_AVGS);
-console.log("headerRange", headerRange);
+  console.log("CHANNEL_AVGS =", CHANNEL_AVGS);
+  console.log("headerRange", headerRange);
 
   const getHeatColor = (value, avg) => {
     const ratio = value / avg;
@@ -204,35 +208,6 @@ console.log("headerRange", headerRange);
     return { inside, outside };
   }
 
-
-  function sliceFeatureByLat(geometry, startLat, endLat) {
-    const polygon = turf.feature(geometry);
-    const bbox = turf.bbox(polygon);
-    const [minLng, , maxLng] = bbox;
-
-    const band = turf.polygon([[
-      [minLng - 5, startLat],
-      [maxLng + 5, startLat],
-      [maxLng + 5, endLat],
-      [minLng - 5, endLat],
-      [minLng - 5, startLat],
-    ]]);
-
-    // ❗ ВАЖНО: intersect теперь через FeatureCollection
-    const intersection = turf.intersect(
-      turf.featureCollection([polygon, band])
-    );
-
-    if (!intersection) return [];
-
-    if (intersection.geometry.type === "MultiPolygon") {
-      return intersection.geometry.coordinates.map(coords =>
-        turf.polygon(coords)
-      );
-    }
-
-    return [intersection];
-  }
   useEffect(() => {
     if (!geoJsonRef.current || !excelData.length) return;
 
@@ -280,9 +255,6 @@ console.log("headerRange", headerRange);
 
     };
 
-
-
-
     const rowInActiveRegion = r => {
       const excelRegions = resolveRegionSynonyms(COLUMN_MAP.region(r));
       return excelRegions.some(reg => selectedRegionView.includes(reg));
@@ -327,54 +299,94 @@ console.log("headerRange", headerRange);
       });
     };
 
+    const filterRow = (r, selected = null) => {
+      const managerRaw = COLUMN_MAP.manager(r);
+      const managerName = managerRaw ? String(managerRaw) : "";
+
+      const territoryRaw = COLUMN_MAP.territory(r);
+      const territoryName = territoryRaw ? String(territoryRaw) : "";
+
+      const allowedChannels = CHANNEL_GROUPS[filters.mapChannel] || [filters.mapChannel];
+      const byMapChannel = !filters.mapChannel || allowedChannels.some(ch => managerName.startsWith(ch));
+      const byFiltersManager = !filters.manager?.length || filters.manager.includes(managerName);
+      const byFiltersTerritory =
+        selected === "TerritoryLayer"
+          ? !filters.territory?.length || filters.territory.includes(territoryName)
+          : true;
+
+      return byMapChannel && byFiltersManager && byFiltersTerritory;
+    };
+
     geoJsonRef.current.eachLayer(layer => {
       const name = layer.feature?.properties?.shapeName;
       if (!name) return;
+      if (layer._tempPolygons) {
+        layer._tempPolygons.forEach(p => p.remove());
+      }
+      layer._tempPolygons = [];
 
       const layerRegions = resolveRegionSynonyms(name);
       const rows = excelData.filter(r => {
         const excelRegions = resolveRegionSynonyms(COLUMN_MAP.region(r));
-        return excelRegions.some(er => layerRegions.includes(er));
+        const regionMatch = excelRegions.some(er => layerRegions.includes(er));
+        if (!regionMatch) return false;
+        return filterRow(r, "TerritoryLayer");
       });
+
+      console.log('[MAP CHANNEL]', filters.mapChannel);
 
       if (!rows.length) return;
       if (heatMapOn) {
         if (layer._tempPolygons) layer._tempPolygons.forEach(p => p.remove());
-      layer._tempPolygons = [];
+        layer._tempPolygons = [];
 
-      if (!layer.feature || !layer.feature.geometry) return;
-        const channel = filters.salesChannel || "RKA"; // выбранный канал
+        if (!layer.feature || !layer.feature.geometry) return;
+        const channel = filters.generalSalesChannel || filters.salesChannel || ""; // выбранный канал
 
         // формируем columnNames для выбранного канала
         let columnNames = [];
-          switch (channel) {
-            case "Non-Skyline":
-              columnNames = ["Non-Skyline"];
-              break;
-            case "Skyline":
-              columnNames = ["Skyline"];
-              break;
-            case "SO NA (w/o Chizhik)":
-              columnNames = ["SO NA (w/o Chizhik)"]
-              break;
-            case "SO RKA (execution)":
-              columnNames = ["SO RKA (execution)"];
-              break;
-            case "RKA":
-              columnNames = ["RKA"];
-              break;
-            case "Merch-model SO":
-              columnNames = ["Merch-model SO"];
-              break;
-            case "NA Leading":
-              columnNames = ["NA Leading"];
-              break;
-            case "RKA Leading":
-              columnNames = ["RKA Leading"];
-              break;
-            default:
-              columnNames = [];
-          }
+        switch (channel) {
+          case "Non-Skyline":
+            columnNames = ["Non-Skyline"];
+            break;
+          case "Skyline":
+            columnNames = ["Skyline"];
+            break;
+          case "SO NA (w/o Chizhik)":
+            columnNames = ["SO NA (w/o Chizhik)"]
+            break;
+          case "SO RKA (execution)":
+            columnNames = ["SO RKA (execution)"];
+            break;
+          case "RKA":
+            columnNames = ["RKA"];
+            break;
+          case "Merch-model SO":
+            columnNames = ["Merch-model SO"];
+            break;
+          case "NA Leading":
+            columnNames = ["NA Leading"];
+            break;
+          case "RKA Leading":
+            columnNames = ["RKA Leading"];
+            break;
+
+          case "Distr trade":
+            columnNames = ["Non-Skyline", "Skyline"]
+            break;
+
+          case "Execution":
+            columnNames = [
+              "SO NA (w/o Chizhik)",
+              "SO RKA (execution)",
+              "Merch-model SO",
+              "NA Leading",
+              "RKA Leading"
+            ];
+            break;
+          default:
+            columnNames = [];
+        }
 
         // totalValue для цвета
         console.log("ROW SAMPLE", rows[0]);
@@ -390,23 +402,25 @@ console.log("headerRange", headerRange);
 
         console.log("total Value = ", totalValue);
 
-        // собираем все ненулевые значения для легенды
-        const allValues = rows.flatMap(r =>
-          columnNames.map(col => parseNumber(r[col]) || 0)
-        ).filter(v => v > 0); // фильтруем нули
+        const filteredGlobal = excelData.filter(r => {
+          if (!filters.mapChannel) return true;
+          const managerName = COLUMN_MAP.manager(r) || "";
+          return managerName.startsWith(filters.mapChannel);
+        })
 
-        const allValuesGlobal = excelData.flatMap(r=> columnNames.map(col => parseNumber(r[col]))).filter(v => v > 0);
+        // const allValuesGlobal = excelData.flatMap(r=> columnNames.map(col => parseNumber(r[col]))).filter(v => v > 0);
+        const allValuesGlobal = filteredGlobal.flatMap(r => columnNames.map(col => parseNumber(r[col]))).filter(v => v > 0);
 
         // если есть ненулевые значения, считаем min/avg/max, иначе 0
         const min = allValuesGlobal.length ? Math.min(...allValuesGlobal) : 0;
         const max = allValuesGlobal.length ? Math.max(...allValuesGlobal) : 0;
-        const avg = allValuesGlobal.length ? allValuesGlobal.reduce((s,v) => s + v, 0) / allValuesGlobal.length : 0;
+        const avg = allValuesGlobal.length ? allValuesGlobal.reduce((s, v) => s + v, 0) / allValuesGlobal.length : 0;
 
         // передаем в легенду
         setHeatLegendValues({ min, avg, max });
 
         // цвет для полигона
-        const avgKey = channel + " avg";
+        const avgKey = !filters.generalSalesChannel ? channel + " avg" : "general " + channel.toLowerCase() + " avg";
         const avgChannel = CHANNEL_AVGS[avgKey] || 1;
         if (totalValue > 0) {
           const color = getHeatColor(totalValue, avgChannel);
@@ -522,9 +536,6 @@ console.log("headerRange", headerRange);
         });
       }
 
-
-
-
       // === HSRLayer ===
       if (selectedLayers.includes("HSRLayer") && isSelected) {
         const hsrRows = rows.filter(r => !filters.hsr?.length || filters.hsr.includes(COLUMN_MAP.hsr(r)));
@@ -546,7 +557,8 @@ console.log("headerRange", headerRange);
         const managerRowsFiltered = rows.filter(r => {
           const managerName = COLUMN_MAP.manager(r);
           if (!managerName) return false;
-          const byMapChannel = !filters.mapChannel || managerName.startsWith(filters.mapChannel);
+          const allowedChannels = CHANNEL_GROUPS[filters.mapChannel] || [filters.mapChannel];
+          const byMapChannel = !filters.mapChannel || allowedChannels.some(ch => managerName.startsWith(ch));
           const byFiltersManager = !filters.manager?.length || filters.manager.includes(managerName);
           return byMapChannel && byFiltersManager;
         });
@@ -582,8 +594,7 @@ console.log("headerRange", headerRange);
               const maxLat = Math.max(...lats);
               const step = (maxLat - minLat) / parts;
 
-              // ВАЖНО — зазор между частями (магия)
-              const gap = step * 0; // 4% зазора, можно 0.03–0.06 подбирать
+              const gap = step * 0;
 
               for (let i = 0; i < parts; i++) {
                 let low = minLat + step * i + gap;
@@ -689,7 +700,8 @@ console.log("headerRange", headerRange);
             const managerName = managerRaw ? String(managerRaw) : "";
 
             // фильтруем по каналу и выбранным менеджерам
-            const byMapChannel = !filters.mapChannel || managerName.startsWith(filters.mapChannel);
+            const allowedChannels = CHANNEL_GROUPS[filters.mapChannel] || [filters.mapChannel];
+            const byMapChannel = !filters.mapChannel || allowedChannels.some(ch => managerName.startsWith(ch));
             const byFiltersManager = !filters.manager?.length || filters.manager.includes(managerName);
             const territoryRaw = COLUMN_MAP.territory(r);
             const territoryName = territoryRaw ? String(territoryRaw) : "";
@@ -724,7 +736,7 @@ console.log("headerRange", headerRange);
     generateLegends("Territory", "TerritoryLayer", setTerritoryLegends);
 
 
-  }, [excelData, selectedRegionView, selectedLayers, filters.region, filters.hsr, filters.mapChannel, filters.manager, filters.territory, filters.salesChannel, heatMapOn]);
+  }, [excelData, selectedRegionView, selectedLayers, filters.region, filters.hsr, filters.mapChannel, filters.manager, filters.territory, filters.salesChannel, filters.generalSalesChannel, heatMapOn]);
 
   const COLUMN_MAP = {
     // Названия регионов/областей
@@ -766,71 +778,84 @@ console.log("headerRange", headerRange);
 
   };
 
-const handleRegionClick = (feature) => {
-  const regionName = feature.properties.shapeName;
-  const layerRegions = resolveRegionSynonyms(regionName);
+  const handleRegionClick = (feature) => {
+    const regionName = feature.properties.shapeName;
+    const layerRegions = resolveRegionSynonyms(regionName);
 
-  // 🔹 Фильтруем строки по региону и фильтрам
-  const rows = excelData.filter(r => {
-    const excelRegions = resolveRegionSynonyms(COLUMN_MAP.region(r));
-    const regionMatch = excelRegions.some(er => layerRegions.includes(er));
-    if (!regionMatch) return false;
+    // 🔹 Фильтруем строки по региону и фильтрам
+    const rows = excelData.filter(r => {
+      const excelRegions = resolveRegionSynonyms(COLUMN_MAP.region(r));
+      const regionMatch = excelRegions.some(er => layerRegions.includes(er));
+      if (!regionMatch) return false;
 
-    if (filters.mapChannel) {
-      const managerName = COLUMN_MAP.manager(r) || "";
-      if (!managerName.startsWith(filters.mapChannel)) return false;
+      if (filters.mapChannel) {
+        const managerName = COLUMN_MAP.manager(r) || "";
+        if (!managerName.startsWith(filters.mapChannel)) return false;
+      }
+
+      if (filters.hsr?.length && !filters.hsr.includes(COLUMN_MAP.hsr(r))) return false;
+      if (filters.manager?.length && !filters.manager.includes(COLUMN_MAP.manager(r))) return false;
+      if (filters.territory?.length && !filters.territory.includes(COLUMN_MAP.territory(r))) return false;
+      if (filters.distributor?.length && !filters.distributor.includes(COLUMN_MAP.distributor(r))) return false;
+
+      return true;
+    });
+
+    // 🔹 Выбираем колонны для выбранного канала
+    const channel = filters.generalSalesChannel || filters.salesChannel || "";
+    let columnNames = [];
+    switch (channel) {
+      case "Non-Skyline": columnNames = ["Non-Skyline"]; break;
+      case "Skyline": columnNames = ["Skyline"]; break;
+      case "SO NA (w/o Chizhik)": columnNames = ["SO NA (w/o Chizhik)"]; break;
+      case "SO RKA (execution)": columnNames = ["SO RKA (execution)"]; break;
+      case "RKA": columnNames = ["RKA"]; break;
+      case "Merch-model SO": columnNames = ["Merch-model SO"]; break;
+      case "NA Leading": columnNames = ["NA Leading"]; break;
+      case "RKA Leading": columnNames = ["RKA Leading"]; break;
+      case "Distr trade": columnNames = ["Non-Skyline", "Skyline"]; break;
+      case "Execution": columnNames = ["SO NA (w/o Chizhik)", "SO RKA (execution)", "Merch-model SO", "NA Leading", "RKA Leading"]; break;
+      default: columnNames = [];
     }
 
-    if (filters.hsr?.length && !filters.hsr.includes(COLUMN_MAP.hsr(r))) return false;
-    if (filters.manager?.length && !filters.manager.includes(COLUMN_MAP.manager(r))) return false;
-    if (filters.territory?.length && !filters.territory.includes(COLUMN_MAP.territory(r))) return false;
-    if (filters.distributor?.length && !filters.distributor.includes(COLUMN_MAP.distributor(r))) return false;
+    // 🔹 Сумма по выбранным фильтрам
+    const total = rows.reduce((sum, r) => {
+      return sum + columnNames.reduce((s, col) => s + (parseNumber(r[col]) || 0), 0);
+    }, 0);
 
-    return true;
-  });
+    const breakdown = {};
+    columnNames.forEach(col => {
+      breakdown[col] = rows.reduce((sum, r) => {
+        return sum + (parseNumber(r[col]) || 0);
+      }, 0)
+    });
 
-  // 🔹 Выбираем колонны для выбранного канала
-  const channel = filters.salesChannel || "RKA";
-  let columnNames = [];
-  switch (channel) {
-    case "Non-Skyline": columnNames = ["Non-Skyline"]; break;
-    case "Skyline": columnNames = ["Skyline"]; break;
-    case "SO NA (w/o Chizhik)": columnNames = ["SO NA (w/o Chizhik)"]; break;
-    case "SO RKA (execution)": columnNames = ["SO RKA (execution)"]; break;
-    case "RKA": columnNames = ["RKA"]; break;
-    case "Merch-model SO": columnNames = ["Merch-model SO"]; break;
-    case "NA Leading": columnNames = ["NA Leading"]; break;
-    case "RKA Leading": columnNames = ["RKA Leading"]; break;
-    default: columnNames = [];
-  }
+    // 🔹 Среднее берём из CHANNEL_AVGS
+    const avgKey = !filters.generalSalesChannel ? channel + " avg" : "general " + channel.toLowerCase() + " avg";
+    const avg = CHANNEL_AVGS[avgKey] ?? 0;
 
-  // 🔹 Сумма по выбранным фильтрам
-  const total = rows.reduce((sum, r) => {
-    return sum + columnNames.reduce((s, col) => s + (parseNumber(r[col]) || 0), 0);
-  }, 0);
+    // 🔹 Формируем объект для модалки
+    const regionData = {
+      region: regionName,
+      hsr: [...new Set(rows.map(r => COLUMN_MAP.hsr(r)).filter(Boolean))],
+      managers: [...new Set(rows.map(r => COLUMN_MAP.manager(r)).filter(Boolean))],
+      territories: [...new Set(rows.map(r => COLUMN_MAP.territory(r)).filter(Boolean))],
+      distributors: [...new Set(rows.map(r => COLUMN_MAP.distributor(r)).filter(Boolean))]
+    };
 
-  // 🔹 Среднее берём из CHANNEL_AVGS
-  const avgKey = channel + " avg";
-  const avg = CHANNEL_AVGS[avgKey] ?? 0;
+    // Добавляем total и avg только если total больше 0
+    if (total > 0) {
+      regionData.total = total;
+      regionData.avg = avg;
+      regionData.breakdown = breakdown;
+      regionData.channel = channel;
+    }
 
-  // 🔹 Формируем объект для модалки
-  const regionData = {
-    region: regionName,
-    hsr: [...new Set(rows.map(r => COLUMN_MAP.hsr(r)).filter(Boolean))],
-    managers: [...new Set(rows.map(r => COLUMN_MAP.manager(r)).filter(Boolean))],
-    territories: [...new Set(rows.map(r => COLUMN_MAP.territory(r)).filter(Boolean))],
-    distributors: [...new Set(rows.map(r => COLUMN_MAP.distributor(r)).filter(Boolean))]
+
+
+    setClickedRegionData(regionData);
+    setModalClickedOpen(true);
   };
-
-  // Добавляем total и avg только если total больше 0
-  if (total > 0) {
-    regionData.total = total;
-    regionData.avg = avg;
-  }
-
-  setClickedRegionData(regionData);
-  setModalClickedOpen(true);
-};
 
   return (
     <>
@@ -867,7 +892,7 @@ const handleRegionClick = (feature) => {
 
 
         <ButtonThemeColor />
-        <ButtonHeatMap heatOn={heatMapOn} setHeatOn={() => {setHeatMapOn(prev => !prev); if (!heatMapOn) setModalMessageVisible(true);}} />
+        <ButtonHeatMap heatOn={heatMapOn} setHeatOn={() => { setHeatMapOn(prev => !prev); if (!heatMapOn) setModalMessageVisible(true); }} />
         <ButtonLayers excelData={excelData} distributorLegends={distributorLegends} setDistributorLegends={setDistributorLegends} selectedLayers={selectedLayers} setSelectedLayers={setSelectedLayers} setHSRLegends={setHSRLegends} setManagerLegends={setManagerLegends} setTerritoryLegends={setTerritoryLegends} />
         {!heatMapOn && (<MapLegends distributorLegends={distributorLegends} hsrLegends={hsrLegends} managerLegends={managerLegends} territoryLegends={territoryLegends} />)}
         {heatMapOn && (<HeatLegends min={heatLegendValues.min} avg={heatLegendValues.avg} max={heatLegendValues.max} />)}

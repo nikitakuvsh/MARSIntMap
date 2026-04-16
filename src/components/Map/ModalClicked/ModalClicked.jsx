@@ -31,9 +31,21 @@ export default function ModalClicked({ data = [], filters, onClose }) {
         </p>
 
         <div className="map-modal-stats">
-          <span><b>{filters.salesChannel || "Канал"}:</b></span>
+          <span><b>{data.channel || filters.salesChannel || "Канал"}:</b></span>
           <span>Сумма — {data.total != null ? data.total.toLocaleString("ru-RU") : "???"}</span>
           <span>Среднее — {data.avg != null ? data.avg.toLocaleString("ru-RU") : "???"}</span>
+
+          {/* 👇 НОВОЕ */}
+          {filters.generalSalesChannel && data.breakdown && (
+            <div style={{ marginTop: "10px" }}>
+              <b>Детализация:</b>
+              {Object.entries(data.breakdown).map(([key, value]) => (
+                <div key={key}>
+                  {key} — {value.toLocaleString("ru-RU")}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

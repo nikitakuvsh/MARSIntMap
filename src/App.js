@@ -14,6 +14,7 @@ function App() {
   const [excelData, setExcelData] = useState([]);
   const [filters, setFilters] = useState({
     mapChannel: "",
+    generalSalesChannel: "",
     salesChannel: "",
     region: [],
     hsr: [],

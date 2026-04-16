@@ -9,6 +9,7 @@ import FiltersSheets from "./FiltersSheets";
 import FiltersChannels from "./FiltersChannels";
 import FiltersSalesChannels from "./FiltersSalesChannels";
 import './FiltersDiv.css';
+import FiltersGeneralSalesChannels from "./FiltersGeneralSalesChannels";
 
 export default function FiltersDiv({ onSelectRegion, setSelectedRegion, setSelectedRegionView, excelData, setExcelData, filters, setFilters, tableValues, regionsByArea, sheetNames, setSheetNames, activeSheet, setActiveSheet, workbook, setWorkbook, headerRange }){
 
@@ -32,6 +33,7 @@ export default function FiltersDiv({ onSelectRegion, setSelectedRegion, setSelec
                     <FiltersSearch onSelectRegion={onSelectRegion}/>
                     <FiltersRegions regionsByArea={regionsByArea} setSelectedRegionView={setSelectedRegionView} />
                     <FiltersChannels filters={filters} setFilters={setFilters} />
+                    <FiltersGeneralSalesChannels filters={filters} setFilters={setFilters} />
                     <FiltersSalesChannels filters={filters} setFilters={setFilters} />
                     <FiltersPosition excelData={excelData} filters={filters} setFilters={setFilters} setSelectedRegionView={setSelectedRegionView} />
                     <FiltersManagers excelData={excelData} filter={filters} setFilters={setFilters} />

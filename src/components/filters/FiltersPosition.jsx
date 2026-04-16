@@ -38,11 +38,11 @@ export default function FiltersPosition({
         const updated = filters.hsr.includes(value)
             ? filters.hsr.filter(v => v !== value)
             : [...filters.hsr, value];
-    
+
         setFilters({ ...filters, hsr: updated });
         // НЕ трогаем selectedRegionView
     };
-    
+
 
     const toggleDistrict = (value) => {
         const updated = filters.district.includes(value)
@@ -56,19 +56,19 @@ export default function FiltersPosition({
     return (
         <div className="filters__group">
 
-<label className="filters__label">HSR</label>
-<div className="checkbox-list">
-    {hsrList.map(hsr => (
-        <label key={hsr} className="checkbox-item">
-            <input
-                type="checkbox"
-                checked={filters.hsr.includes(hsr)}
-                onChange={() => toggleHSR(hsr)}
-            />
-            {hsr}
-        </label>
-    ))}
-</div>
+            <label className="filters__label">HSR</label>
+            <div className="checkbox-list">
+                {hsrList.map(hsr => (
+                    <label key={hsr} className="checkbox-item">
+                        <input
+                            type="checkbox"
+                            checked={filters.hsr.includes(hsr)}
+                            onChange={() => toggleHSR(hsr)}
+                        />
+                        {hsr}
+                    </label>
+                ))}
+            </div>
 
 
             {districtsForHSR.length > 0 && (

@@ -111,3 +111,7 @@ select, button {
 .hidden-comp {
     display: none !important;
 }
+
+#root > div > div.page__content > div.map.leaflet-container.leaflet-touch.leaflet-fade-anim.leaflet-grab.leaflet-touch-drag.leaflet-touch-zoom > div.leaflet-control-container > div.leaflet-bottom.leaflet-right {
+    display: none !important;
+}

@@ -6,7 +6,7 @@ export default function FiltersSalesChannels({ filters, setFilters }) {
 
   return (
     <div className="filters__group">
-      <label className="filters__label">Выберите канал продаж</label>
+      <label className="filters__label">Выбрать точечный канал продаж</label>
       <select
         className="filters__select"
         value={filters.salesChannel || ""}
