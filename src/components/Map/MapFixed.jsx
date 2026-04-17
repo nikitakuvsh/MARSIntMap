@@ -378,10 +378,7 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
           case "Execution":
             columnNames = [
               "SO NA (w/o Chizhik)",
-              "SO RKA (execution)",
-              "Merch-model SO",
-              "NA Leading",
-              "RKA Leading"
+              "SO RKA (execution)"
             ];
             break;
           default:
@@ -814,7 +811,7 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
       case "NA Leading": columnNames = ["NA Leading"]; break;
       case "RKA Leading": columnNames = ["RKA Leading"]; break;
       case "Distr trade": columnNames = ["Non-Skyline", "Skyline"]; break;
-      case "Execution": columnNames = ["SO NA (w/o Chizhik)", "SO RKA (execution)", "Merch-model SO", "NA Leading", "RKA Leading"]; break;
+      case "Execution": columnNames = ["SO NA (w/o Chizhik)", "SO RKA (execution)"]; break;
       default: columnNames = [];
     }
 

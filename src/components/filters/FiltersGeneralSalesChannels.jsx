@@ -1,7 +1,7 @@
 import React from "react";
 
 export default function FiltersGeneralSalesChannels({ filters, setFilters }) {
-  const options = ["RKA", "Distr trade", "Execution"];
+  const options = ["RKA", "Distr trade", "Execution", "Merch-model SO"];
 
   return (
     <div className="filters__group">
