@@ -5,6 +5,7 @@ import Table from "./components/Table/Table";
 import Loading from "./components/Loading/Loading";
 import regionsByArea from "./components/Map/RegionsData";
 import MapFixed from "./components/Map/MapFixed";
+import MapLeaflet from "./components/Map/MapFixed";
 import Edu from "./components/Edu/Edu";
 import './styles.css';
 
@@ -40,13 +41,13 @@ function App() {
       <div className='page__content'>
         {!showEdu && (
           <>
-            <MapFixed
+            
+            <MapLeaflet
               selectedRegion={selectedRegion}
               setSelectedRegion={setSelectedRegion}
               selectedRegionView={selectedRegionView}
+              setSelectedRegionView={setSelectedRegionView}
               excelData={excelData}
-              mapDataColumn={filters.mapDataColumn}
-              mapDataColumnValues={filters.mapDataColumn ? tableValues[filters.mapDataColumn] : []}
               regionsByArea={regionsData}
               setRegionsData={setRegionsData}
               filters={filters}
@@ -54,6 +55,7 @@ function App() {
               headerRange={headerRange}
               showEdu={showEdu}
             />
+
             <FiltersDiv
               onSelectRegion={setSelectedRegion}
               setSelectedRegion={setSelectedRegion}

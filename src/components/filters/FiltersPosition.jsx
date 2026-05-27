@@ -9,7 +9,7 @@ export default function FiltersPosition({
     const [districtsForHSR, setDistrictsForHSR] = useState([]);
 
     const hsrList = Array.from(
-        new Set(excelData.map(row => row["Region / HSR"]).filter(Boolean))
+        new Set(excelData.map(row => row["Region / HSR", "Регион"]).filter(Boolean))
     );
 
     // обновляем список District при смене HSR

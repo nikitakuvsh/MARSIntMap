@@ -12,13 +12,13 @@ import closedEyeIcon from '../../images/icons/closedEye.png';
 import openedEyeIcon from '../../images/icons/openedEye.png';
 import RegionsEditorModalContent from "../RegionsEditorModal/RegionsEditorModalContent";
 import ModalClicked from "./ModalClicked/ModalClicked";
-import ButtonHeatMap from "../ButtonHeatMap/ButtonHeatMap";
 import { resolveRegionName } from "./hooks/ResolveRegionName";
 import L from "leaflet";
 import regionSynonyms from "./RegionsDataSynomys";
 import * as turf from "@turf/turf";
 import HeatLegends from "./HeatLegends/HeatLegends";
 import ModalMessage from "../ModalMessage/ModalMessage";
+import colorsIcon from '../../images/icons/colors.svg';
 
 export default function MapLeaflet({ selectedRegion, setSelectedRegion, selectedRegionView = [], setSelectedRegionView, excelData = [], mapDataColumn = null, mapDataColumnValues = [], regionsByArea, setRegionsData, filters, setHeaderRange, headerRange, showEdu }) {
   const [geoData, setGeoData] = useState(null);
@@ -35,19 +35,66 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
   const [visibleGeoData, setVisibleGeoData] = useState(null);
   const geoJsonRef = useRef(null);
   const [styleMap, setStyleMap] = useState(true);
-  const colorsRef = useRef({});
   const [hsrMarkers, setHsrMarkers] = useState([]);
   const [regionsEditorModalOpen, setRegionsEditorModalOpen] = useState(false);
   const [modalClickedOpen, setModalClickedOpen] = useState(true);
   const [clickedRegionData, setClickedRegionData] = useState(null);
   const [heatMapOn, setHeatMapOn] = useState(false);
   const [heatLegendValues, setHeatLegendValues] = useState({ min: 0, avg: 0, max: 0 });
+  const [changeColors, setChangeColors] = useState(false);
 
   const CHANNEL_GROUPS = {
     DDM: ["DDM", "ASM"],
     TDM: ["TDM"],
     RADM: ["RADM"],
   }
+
+  const COLOR_STORAGE_KEY = "map_colors_v1";
+
+  // const colorsRef = useRef({});
+
+  const loadColors = () => {
+    try {
+      const saved = localStorage.getItem(COLOR_STORAGE_KEY);
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  };
+
+  const savedColors = (colors) => {
+    localStorage.setItem(COLOR_STORAGE_KEY, JSON.stringify(colors));
+    setChangeColors((prev) => !prev);
+  }
+
+  const colorsRef = useRef(loadColors());
+
+  const getColor = (key) => {
+    const colors = colorsRef.current;
+    if (!colors[key]) {
+      colors[key] =
+        "#" + Math.floor(Math.random() * 0xffffff)
+          .toString(16)
+          .padStart(6, "0");
+
+      savedColors(colors);
+    }
+
+    return colors[key];
+  };
+
+  const shuffleColors = () => {
+    const keys = Object.keys(colorsRef.current);
+
+    const newColors = {};
+    keys.forEach(k => {
+      newColors[k] =
+        "#" + Math.floor(Math.random() * 0xffffff)
+          .toString(16)
+          .padStart(6, "0");
+    });
+
+    colorsRef.current = newColors;
+    savedColors(newColors);
+  };
 
   const parseNumber = (val) => {
     if (val === null || val === undefined || val === "") return 0;
@@ -437,7 +484,21 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
 
       if (selectedLayers.includes("DistributorLayer") && isSelected) {
 
-        const distributorsRaw = rows
+        const filteredRows = rows.filter(r => {
+          const hsr = COLUMN_MAP.hsr(r);
+          const manager = COLUMN_MAP.manager(r);
+          const distributor = COLUMN_MAP.distributor(r);
+
+
+          const byHSR = !filters.hsr?.length || filters.hsr.includes(hsr);
+          const byManager = !filters.manager?.length || filters.manager.includes(manager);
+          const byDistributor = !filters.distributor?.length || filters.distributor.includes(distributor);
+               console.log(`[DISTRIBUTORS] ${byDistributor}`);
+
+          return byHSR && byManager && byDistributor;
+        });
+
+        const distributorsRaw = filteredRows
           .map(r => pick(r, "Distributor", "Дистр"))
           .filter(Boolean);
 
@@ -448,13 +509,7 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
         const colors = [];
 
         distributors.forEach(d => {
-          if (!colorsGenerated[d]) {
-            colorsGenerated[d] =
-              "#" + Math.floor(Math.random() * 0xffffff)
-                .toString(16)
-                .padStart(6, "0");
-          }
-          colors.push(colorsGenerated[d]);
+          colors.push(getColor(d));
         });
 
         const scaledFeature = safeScale(layer.feature, 1);
@@ -533,150 +588,111 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
         });
       }
 
+      const drawSplitPolygon = (layer, feature, colors, onClick) => {
+        let coordsArray = [];
+
+        if (feature.geometry.type === "Polygon") {
+          coordsArray = [feature.geometry.coordinates];
+        } else {
+          coordsArray = feature.geometry.coordinates;
+        }
+
+        coordsArray.forEach(ringSet => {
+          ringSet.forEach(ring => {
+            if (!ring || !ring.length) return;
+
+            const lats = ring.map(p => p[1]);
+            const minLat = Math.min(...lats);
+            const maxLat = Math.max(...lats);
+            const step = (maxLat - minLat) / colors.length;
+
+            for (let i = 0; i < colors.length; i++) {
+
+              const low = minLat + step * i;
+              const high = minLat + step * (i + 1);
+
+              const partPolygon = ring.map(point => {
+                const [lng, lat] = point;
+
+                if (lat < low) return [lng, low];
+                if (lat > high) return [lng, high];
+                return [lng, lat];
+              });
+
+              const leafletCoords = partPolygon.map(p => [p[1], p[0]]);
+
+              const poly = L.polygon(leafletCoords, {
+                color: "#000",
+                weight: 0,
+                fillColor: colors[i],
+                fillOpacity: 1
+              }).addTo(layer._map);
+
+              poly.on("click", () => onClick(layer.feature));
+
+              if (!layer._tempPolygons) layer._tempPolygons = [];
+              layer._tempPolygons.push(poly);
+            }
+          });
+        });
+
+        layer.setStyle({
+          fillOpacity: 0,
+          color: "#000",
+          weight: 1
+        });
+      };
+
       // === HSRLayer ===
       if (selectedLayers.includes("HSRLayer") && isSelected) {
-        const hsrRows = rows.filter(r => !filters.hsr?.length || filters.hsr.includes(COLUMN_MAP.hsr(r)));
-        const hsrNames = [...new Set(hsrRows.map(r => COLUMN_MAP.hsr(r)).filter(Boolean))];
+        const hsrNames = [
+          ...new Set(
+            rows
+              .map(r => COLUMN_MAP.hsr(r))
+              .filter(h => h && (!filters.hsr?.length || filters.hsr.includes(h)))
+          )
+        ];
 
         hsrNames.forEach(h => {
-          if (!colorsGenerated[h])
-            colorsGenerated[h] = `#${Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, "0")}`;
-
-          const scaledFeature = safeScale(layer.feature, 1);
-          if (!scaledFeature) return;
-
-          drawPolygonFeature(layer, scaledFeature, colorsGenerated[h], 1, 1);
+          drawPolygonFeature(layer, layer.feature, getColor(h), 1, 1);
         });
       }
 
-      // === ManagerLayer + Territory ===
       if (selectedLayers.includes("ManagerLayer") && isSelected) {
+
         const managerRowsFiltered = rows.filter(r => {
           const managerName = COLUMN_MAP.manager(r);
           if (!managerName) return false;
+
           const allowedChannels = CHANNEL_GROUPS[filters.mapChannel] || [filters.mapChannel];
-          const byMapChannel = !filters.mapChannel || allowedChannels.some(ch => managerName.startsWith(ch));
-          const byFiltersManager = !filters.manager?.length || filters.manager.includes(managerName);
+          const byMapChannel =
+            !filters.mapChannel || allowedChannels.some(ch => managerName.startsWith(ch));
+
+          const byFiltersManager =
+            !filters.manager?.length || filters.manager.includes(managerName);
+
           return byMapChannel && byFiltersManager;
         });
 
-        const managers = [...new Set(managerRowsFiltered.map(r => COLUMN_MAP.manager(r)).filter(Boolean))];
+        const managers = [...new Set(
+          managerRowsFiltered.map(r => COLUMN_MAP.manager(r)).filter(Boolean)
+        )];
+
         if (!managers.length) return;
 
-        const managerColors = managers.map(m => {
-          if (!colorsGenerated[m])
-            colorsGenerated[m] = `#${Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, "0")}`;
-          return colorsGenerated[m];
-        });
-
-        const scaledFeature = safeScale(layer.feature, 0.85);
+        const scaledFeature = safeScale(layer.feature, 1);
         if (!scaledFeature) return;
 
-        const drawSplitNReturnFeatures = (feature, colors) => {
-          if (!feature?.geometry?.coordinates?.length) return [];
+        const colors = managers.map(m => getColor(m));
 
-          const coordsArray = feature.geometry.type === "Polygon"
-            ? [feature.geometry.coordinates]
-            : feature.geometry.coordinates;
+        if (managers.length === 1) {
+          drawPolygonFeature(layer, scaledFeature, colors[0], 1, 1);
+          return;
+        }
 
-          const parts = colors.length;
-          const newFeatures = [];
-
-          coordsArray.forEach(ringSet => {
-            ringSet.forEach(ring => {
-              if (!ring || !ring.length) return;
-
-              const lats = ring.map(([lng, lat]) => lat);
-              const minLat = Math.min(...lats);
-              const maxLat = Math.max(...lats);
-              const step = (maxLat - minLat) / parts;
-
-              const gap = step * 0;
-
-              for (let i = 0; i < parts; i++) {
-                let low = minLat + step * i + gap;
-                let high = minLat + step * (i + 1) - gap;
-
-                const partPolygon = ring.map(([lng, lat]) => {
-                  if (lat < low) return [lng, low];
-                  if (lat > high) return [lng, high];
-                  return [lng, lat];
-                });
-
-                newFeatures.push({
-                  type: "Feature",
-                  geometry: {
-                    type: "Polygon",
-                    coordinates: [partPolygon]
-                  },
-                  properties: {}
-                });
-              }
-            });
-          });
-
-          return newFeatures;
-        };
-
-
-        // Делим на N менеджеров
-        const managerFeatures = managers.length === 1
-          ? [scaledFeature]
-          : drawSplitNReturnFeatures(scaledFeature, managerColors);
-
-        managers.forEach((m, idx) => {
-          const managerFeature = managerFeatures[idx];
-          if (!managerFeature) return;
-
-          // Рисуем менеджера
-          drawPolygonFeature(layer, managerFeature, managerColors[idx]);
-
-          // === Territory внутри менеджера с фильтрацией ===
-          if (selectedLayers.includes("TerritoryLayer")) {
-            // Фильтруем строки, чтобы оставить только текущего менеджера и выбранные территории
-            const territoryRows = managerRowsFiltered.filter(r => {
-              const territoryRaw = COLUMN_MAP.territory(r);
-              const territoryName = territoryRaw ? String(territoryRaw) : "";
-
-              const byFiltersTerritory = !filters.territory?.length || filters.territory.includes(territoryName);
-
-              return COLUMN_MAP.manager(r) === m && byFiltersTerritory;
-            });
-
-            const territories = [...new Set(territoryRows.map(r => COLUMN_MAP.territory(r)).filter(Boolean))];
-            if (!territories.length) return;
-
-            const territoryColors = territories.map(t => {
-              if (!colorsGenerated[t])
-                colorsGenerated[t] = `#${Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, "0")}`;
-              return colorsGenerated[t];
-            });
-
-            console.log('territoryColors = ', territoryColors);
-
-            // Масштабируем Territory сильнее, чем менеджера
-            const territoryFeatureScaled = safeScale(managerFeature, 0.8);
-
-            const territoryFeatures = territories.length === 1
-              ? [territoryFeatureScaled]
-              : drawSplitNReturnFeatures(territoryFeatureScaled, territoryColors);
-
-            territoryFeatures.forEach((feat, tIdx) => {
-              const color = territoryColors[tIdx % territoryColors.length];
-              drawPolygonFeature(layer, feat, color);
-            });
-          }
-        });
-
-        // Скрываем исходный полигон
-        layer.setStyle({ fillOpacity: 0, color: "#000", weight: 1 });
+        drawSplitPolygon(layer, scaledFeature, colors, handleRegionClick);
       }
 
-
-      // Прозрачный стиль для остальных
-      if (!selectedLayers.some(sl => ["DistributorLayer", "HSRLayer", "ManagerLayer"].includes(sl)) || !isSelected) {
-        layer.setStyle({ fillOpacity: 0, color: "#000", weight: 1 });
-      }
     });
 
     setHsrMarkers(newHsrMarkers);
@@ -733,7 +749,7 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
     generateLegends("Territory", "TerritoryLayer", setTerritoryLegends);
 
 
-  }, [excelData, selectedRegionView, selectedLayers, filters.region, filters.hsr, filters.mapChannel, filters.manager, filters.territory, filters.salesChannel, filters.generalSalesChannel, heatMapOn]);
+  }, [excelData, selectedRegionView, selectedLayers, filters.region, filters.hsr, filters.distributor, filters.mapChannel, filters.manager, filters.territory, filters.salesChannel, filters.generalSalesChannel, heatMapOn, changeColors]);
 
   const COLUMN_MAP = {
     // Названия регионов/областей
@@ -756,6 +772,7 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
     hsr: r => pick(
       r,
       "Region / HSR",     // старая таблица
+      "Регион"
     ),
 
     // Менеджер/руководитель
@@ -889,13 +906,13 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
 
 
         <ButtonThemeColor />
-        <ButtonHeatMap heatOn={heatMapOn} setHeatOn={() => { setHeatMapOn(prev => !prev); if (!heatMapOn) setModalMessageVisible(true); }} />
         <ButtonLayers excelData={excelData} distributorLegends={distributorLegends} setDistributorLegends={setDistributorLegends} selectedLayers={selectedLayers} setSelectedLayers={setSelectedLayers} setHSRLegends={setHSRLegends} setManagerLegends={setManagerLegends} setTerritoryLegends={setTerritoryLegends} />
         {!heatMapOn && (<MapLegends distributorLegends={distributorLegends} hsrLegends={hsrLegends} managerLegends={managerLegends} territoryLegends={territoryLegends} />)}
         {heatMapOn && (<HeatLegends min={heatLegendValues.min} avg={heatLegendValues.avg} max={heatLegendValues.max} />)}
         <RegionsEditorModal openModal={() => setRegionsEditorModalOpen(prev => !prev)} />
         <ButtonBug setHeaderRange={setHeaderRange} />
         <button className="style-map--button" onClick={() => setStyleMap(prev => !prev)} title="Изменить стиль карты"><img src={styleMap ? openedEyeIcon : closedEyeIcon} alt="Глаз" /></button>
+        <button className="style-map--button button--colors" onClick={shuffleColors} title="Перемешать цвета" ><img src={colorsIcon} /></button>
       </MapContainer>
       <>
         {regionsEditorModalOpen && <RegionsEditorModalContent initRegionsData={regionsByArea} onChange={setRegionsData} onClose={() => setRegionsEditorModalOpen(false)} />}

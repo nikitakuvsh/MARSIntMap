@@ -19,7 +19,7 @@ export default function FiltersManagers({ excelData = [], filter = {}, setFilter
       ...new Set(
         excelData
           .filter(row => !safeFilter.region.length || safeFilter.region.includes(row["Region / HSR"]))
-          .map(row => row["Manager"])
+          .map(row => row["Manager", "Позиция менеджера"])
           .filter(Boolean)
       )
     ];
@@ -72,7 +72,7 @@ useEffect(() => {
         .filter(row => !safeFilter.region.length || safeFilter.region.includes(row["Region / HSR"]))
         // фильтруем по выбранным территориям, если они выбраны
         .filter(row => !safeFilter.territory.length || safeFilter.territory.includes(row["Territory"]))
-        .map(row => row["Distributor"])
+        .map(row => row["Distributor", "Дистр"])
         .filter(Boolean)
     )
   ];
