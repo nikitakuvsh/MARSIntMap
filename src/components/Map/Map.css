@@ -60,3 +60,8 @@
   height: 40px;
   object-fit: cover;
 }
+
+.style-map--button.button--colors {
+  right: 140px;
+  border: none;
+}
