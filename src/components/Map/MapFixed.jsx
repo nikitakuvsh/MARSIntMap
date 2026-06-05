@@ -22,6 +22,7 @@ import colorsIcon from '../../images/icons/colors.svg';
 
 export default function MapLeaflet({ selectedRegion, setSelectedRegion, selectedRegionView = [], setSelectedRegionView, excelData = [], mapDataColumn = null, mapDataColumnValues = [], regionsByArea, setRegionsData, filters, setHeaderRange, headerRange, showEdu }) {
   const [geoData, setGeoData] = useState(null);
+  const [extraData, setExtraData] = useState(null);
   const greenColor = "rgba(6, 255, 6, 0.8)";
   const [activeRegions, setActiveRegions] = useState([]);
   const activeRegionsRef = useRef([]);
@@ -155,12 +156,22 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
   console.log("[render] selectedRegion =", selectedRegion);
 
   useEffect(() => {
-    fetch("/geo.geojson")
-      .then(r => r.json())
-      .then(data => {
-        console.log("[GeoJSON] loaded", data.features.length);
-        setGeoData(data);
-      });
+    Promise.all([
+      fetch("/geo.geojson").then(r => r.json()),
+      fetch("/belarus.geojson").then(r => r.json())
+    ]).then(([main, regions]) => {
+      console.log("[GeoJSON] loaded both");
+      
+      const merged = {
+        type: "FeatureCollection",
+        features: [
+          ...main.features,
+          ...regions.features
+        ]
+      };
+
+      setGeoData(merged);
+    });
   }, []);
   useEffect(() => {
     if (!geoData || !regionsByArea) return;
