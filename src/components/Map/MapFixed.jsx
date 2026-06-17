@@ -424,9 +424,11 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
 
     };
 
+    const safeSelectedRegionView = Array.isArray(selectedRegionView) ? selectedRegionView : []; 
+
     const rowInActiveRegion = r => {
       const excelRegions = resolveRegionSynonyms(COLUMN_MAP.region(r));
-      return excelRegions.some(reg => selectedRegionView.includes(reg));
+      return excelRegions.some(reg => safeSelectedRegionView.includes(reg));
     };
 
     const safeScale = (feature, factor = 0.85) => {
