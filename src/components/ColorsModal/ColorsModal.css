@@ -1,0 +1,157 @@
+.colors-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(3px);
+}
+
+.colors-modal {
+  width: 900px;
+  height: 700px;
+
+  background: white;
+  border-radius: 16px;
+
+  display: flex;
+  flex-direction: column;
+
+  overflow: hidden;
+
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.colors-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  padding: 20px 24px;
+
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.colors-modal-header h2 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.colors-modal-close {
+  width: 40px;
+  height: 40px;
+
+  border: none;
+  border-radius: 8px;
+
+  background: #f2f2f2;
+
+  cursor: pointer;
+
+  font-size: 24px;
+}
+
+.colors-modal-close:hover {
+  background: #e5e5e5;
+}
+
+.colors-modal-tabs {
+  display: flex;
+  gap: 10px;
+
+  padding: 16px 24px;
+
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.colors-tab {
+  border: none;
+
+  padding: 10px 16px;
+
+  border-radius: 10px;
+
+  background: #f3f4f6;
+
+  cursor: pointer;
+
+  transition: .2s;
+}
+
+.colors-tab:hover {
+  background: #e5e7eb;
+}
+
+.colors-tab-active {
+  background: #2563eb;
+  color: white;
+}
+
+.colors-modal-search {
+  padding: 16px 24px;
+}
+
+.colors-modal-search input {
+  width: 100%;
+
+  height: 42px;
+
+  border: 1px solid #d9d9d9;
+  border-radius: 10px;
+
+  padding: 0 14px;
+
+  font-size: 15px;
+}
+
+.colors-modal-list {
+  flex: 1;
+
+  overflow-y: auto;
+
+  padding: 0 24px 24px;
+}
+
+.color-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  min-height: 56px;
+
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.color-row-title {
+  max-width: 650px;
+
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+
+  font-size: 15px;
+}
+
+.color-row input[type="color"] {
+  width: 52px;
+  height: 36px;
+
+  border: none;
+  cursor: pointer;
+  background: transparent;
+}
+
+.empty-colors {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  height: 300px;
+
+  color: #999;
+}

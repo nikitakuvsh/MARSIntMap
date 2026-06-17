@@ -64,10 +64,25 @@ body.dark-theme .style-map--button,
 body.dark-theme .leaflet-control-zoom-in,
 body.dark-theme .leaflet-control-zoom-out,
 body.dark-theme .legends__toggle-btn,
-body.dark-theme .button-bug {
+body.dark-theme .button-bug,
+.colors-modal {
     background-color: #444444 !important;
     color: #f0f0f0 !important;
     border-color: #f0f0f0 !important;
+}
+
+body.dark-theme .colors-tab {
+    background-color: #555555 !important;
+    color: #f0f0f0 !important;
+}
+
+body.dark-theme .colors-tab.colors-tab-active {
+    background-color: #2563eb !important;
+    color: white !important;
+}
+
+body.dark-theme .colors-tab:hover {
+    background-color: #737373 !important;
 }
 
 body.dark-theme .table__th {

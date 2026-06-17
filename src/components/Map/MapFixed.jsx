@@ -13,12 +13,13 @@ import openedEyeIcon from '../../images/icons/openedEye.png';
 import RegionsEditorModalContent from "../RegionsEditorModal/RegionsEditorModalContent";
 import ModalClicked from "./ModalClicked/ModalClicked";
 import { resolveRegionName } from "./hooks/ResolveRegionName";
-import L from "leaflet";
+import L, { layerGroup } from "leaflet";
 import regionSynonyms from "./RegionsDataSynomys";
 import * as turf from "@turf/turf";
 import HeatLegends from "./HeatLegends/HeatLegends";
 import ModalMessage from "../ModalMessage/ModalMessage";
 import colorsIcon from '../../images/icons/colors.svg';
+import ColorsModal from "../ColorsModal/ColorsModal";
 
 export default function MapLeaflet({ selectedRegion, setSelectedRegion, selectedRegionView = [], setSelectedRegionView, excelData = [], mapDataColumn = null, mapDataColumnValues = [], regionsByArea, setRegionsData, filters, setHeaderRange, headerRange, showEdu }) {
   const [geoData, setGeoData] = useState(null);
@@ -43,6 +44,7 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
   const [heatMapOn, setHeatMapOn] = useState(false);
   const [heatLegendValues, setHeatLegendValues] = useState({ min: 0, avg: 0, max: 0 });
   const [changeColors, setChangeColors] = useState(false);
+  const [colorsModalOpen, setColorsModalOpen] = useState(false);
 
   const CHANNEL_GROUPS = {
     DDM: ["DDM", "ASM"],
@@ -52,13 +54,37 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
 
   const COLOR_STORAGE_KEY = "map_colors_v1";
 
+  const DEFAULT_REGION_COLORS = {
+    "Москва": "#b71c1c",
+    "Север": "#64b5f6",
+    "Юг": "#ef6c00",
+    "Центр": "#bdbdbd",
+    "Сибирь": "#4caf50",
+    "Дальний Восток": "#0d47a1",
+    "Беларусь": "#1b5e20",
+  };
+
   // const colorsRef = useRef({});
 
   const loadColors = () => {
     try {
-      const saved = localStorage.getItem(COLOR_STORAGE_KEY);
-      return saved ? JSON.parse(saved) : {};
-    } catch { return {}; }
+      const saved =
+        localStorage.getItem(
+          COLOR_STORAGE_KEY
+        );
+
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch { }
+
+    return {
+      regions: {},
+      hsr: {},
+      managers: {},
+      territories: {},
+      distributors: {}
+    };
   };
 
   const savedColors = (colors) => {
@@ -68,10 +94,14 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
 
   const colorsRef = useRef(loadColors());
 
-  const getColor = (key) => {
+  const getColor = (group, key) => {
     const colors = colorsRef.current;
-    if (!colors[key]) {
-      colors[key] =
+    if (!colors[group]) {
+      colors[group] = {};
+    }
+
+    if (!colors[group][key]) {
+      colors[group][key] =
         "#" + Math.floor(Math.random() * 0xffffff)
           .toString(16)
           .padStart(6, "0");
@@ -79,8 +109,60 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
       savedColors(colors);
     }
 
-    return colors[key];
+    return colors[group][key];
+  }
+
+  const getHSRColor = (key) => {
+    const colors = colorsRef.current;
+
+    if (!colors.hsr) {
+      colors.hsr = {};
+    }
+
+    // 1. уже есть пользовательский цвет
+    if (colors.hsr[key]) {
+      return colors.hsr[key];
+    }
+
+    // 2. дефолтный цвет
+    if (DEFAULT_REGION_COLORS[key]) {
+      colors.hsr[key] = DEFAULT_REGION_COLORS[key];
+      savedColors(colors);
+      return colors.hsr[key];
+    }
+
+    // 3. fallback random
+    colors.hsr[key] =
+      "#" + Math.floor(Math.random() * 0xffffff)
+        .toString(16)
+        .padStart(6, "0");
+
+    savedColors(colors);
+    return colors.hsr[key];
   };
+
+  const updateColor = (group, key, color) => {
+    const next = structuredClone(colorsRef.current);
+
+    if (!next[group]) {
+      next[group] = {};
+    }
+
+    next[group][key] = color;
+
+    colorsRef.current = next;
+    savedColors(next);
+  };
+
+  const getRegionColor = (region) => {
+    const customColor = colorsRef.current?.regions?.[region];
+
+    if (customColor) {
+      return customColor;
+    }
+
+    return DEFAULT_REGION_COLORS[region] || "#888";
+  }
 
   const shuffleColors = () => {
     const keys = Object.keys(colorsRef.current);
@@ -161,7 +243,7 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
       fetch("/belarus.geojson").then(r => r.json())
     ]).then(([main, regions]) => {
       console.log("[GeoJSON] loaded both");
-      
+
       const merged = {
         type: "FeatureCollection",
         features: [
@@ -267,6 +349,34 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
   }
 
   useEffect(() => {
+    if (!geoData) return;
+
+    const regions = new Set();
+
+    geoData.features.forEach(f => {
+      const name = f?.properties?.shapeName;
+      if (name) regions.add(name);
+    });
+
+    const colors = colorsRef.current;
+
+    regions.forEach(region => {
+      if (!colors.regions[region]) {
+        colors.regions[region] =
+          DEFAULT_REGION_COLORS[region] ||
+          "#" + Math.floor(Math.random() * 0xffffff)
+            .toString(16)
+            .padStart(6, "0");
+      }
+    });
+
+    colorsRef.current = colors;
+    savedColors(colors);
+
+    setChangeColors(prev => !prev);
+  }, [geoData]);
+
+  useEffect(() => {
     if (!geoJsonRef.current || !excelData.length) return;
 
     const colorsGenerated = colorsRef.current;
@@ -294,6 +404,7 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
         r,
         "Region / HSR",     // старая таблица
         "Регион",
+        "Region / HSR"
       ),
 
       // Менеджер/руководитель
@@ -384,11 +495,10 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
       layer._tempPolygons = [];
 
       const layerRegions = resolveRegionSynonyms(name);
+
       const rows = excelData.filter(r => {
         const excelRegions = resolveRegionSynonyms(COLUMN_MAP.region(r));
-        const regionMatch = excelRegions.some(er => layerRegions.includes(er));
-        if (!regionMatch) return false;
-        return filterRow(r, "TerritoryLayer");
+        return excelRegions.some(er => layerRegions.includes(er));
       });
 
       console.log('[MAP CHANNEL]', filters.mapChannel);
@@ -504,7 +614,7 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
           const byHSR = !filters.hsr?.length || filters.hsr.includes(hsr);
           const byManager = !filters.manager?.length || filters.manager.includes(manager);
           const byDistributor = !filters.distributor?.length || filters.distributor.includes(distributor);
-               console.log(`[DISTRIBUTORS] ${byDistributor}`);
+          console.log(`[DISTRIBUTORS] ${byDistributor}`);
 
           return byHSR && byManager && byDistributor;
         });
@@ -520,7 +630,7 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
         const colors = [];
 
         distributors.forEach(d => {
-          colors.push(getColor(d));
+          colors.push(getColor("distributors", d));
         });
 
         const scaledFeature = safeScale(layer.feature, 1);
@@ -665,7 +775,7 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
         ];
 
         hsrNames.forEach(h => {
-          drawPolygonFeature(layer, layer.feature, getColor(h), 1, 1);
+          drawPolygonFeature(layer, layer.feature, getHSRColor(h), 1, 1);
         });
       }
 
@@ -694,9 +804,49 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
         const scaledFeature = safeScale(layer.feature, 1);
         if (!scaledFeature) return;
 
-        const colors = managers.map(m => getColor(m));
+        const colors = managers.map(m => getColor("managers", m));
 
         if (managers.length === 1) {
+          drawPolygonFeature(layer, scaledFeature, colors[0], 1, 1);
+          return;
+        }
+
+        drawSplitPolygon(layer, scaledFeature, colors, handleRegionClick);
+      }
+
+      if (selectedLayers.includes("TerritoryLayer") && isSelected) {
+
+        const territoryRowsFiltered = rows.filter(r => {
+          const territoryName = COLUMN_MAP.territory(r);
+          if (!territoryName) return false;
+
+          const allowedChannels = CHANNEL_GROUPS[filters.mapChannel] || [filters.mapChannel];
+
+          const managerName = COLUMN_MAP.manager(r) || "";
+
+          const byMapChannel =
+            !filters.mapChannel || allowedChannels.some(ch => managerName.startsWith(ch));
+
+          const byFiltersTerritory =
+            !filters.territory?.length || filters.territory.includes(territoryName);
+
+          return byMapChannel && byFiltersTerritory;
+        });
+
+        const territories = [...new Set(
+          territoryRowsFiltered
+            .map(r => COLUMN_MAP.territory(r))
+            .filter(Boolean)
+        )];
+
+        if (!territories.length) return;
+
+        const scaledFeature = safeScale(layer.feature, 1);
+        if (!scaledFeature) return;
+
+        const colors = territories.map(t => getColor("territories", t));
+
+        if (territories.length === 1) {
           drawPolygonFeature(layer, scaledFeature, colors[0], 1, 1);
           return;
         }
@@ -709,7 +859,7 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
     setHsrMarkers(newHsrMarkers);
 
     // ===== Легенды =====
-    const generateLegends = (key, selected, setLegends) => {
+    const generateLegends = (key, selected, group, setLegends) => {
       if (!selectedLayers.includes(selected)) { setLegends([]); return; }
 
       const legends = excelData
@@ -718,6 +868,10 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
           if (selected === "HSRLayer") {
             return !filters.hsr?.length || filters.hsr.includes(COLUMN_MAP.hsr(r));
           }
+
+          console.log("TERRITORY CHECK", {
+            selectedLayers, sampleTerritory: COLUMN_MAP.territory(excelData[0]), selectedRegionView,
+          });
 
           if (selected === "ManagerLayer" || selected === "TerritoryLayer") {
             const managerRaw = COLUMN_MAP.manager(r);
@@ -748,16 +902,16 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
         .filter(Boolean)
         // убираем повторяющиеся значения
         .filter((v, i, a) => a.findIndex(x => x === v) === i)
-        .map(title => ({ title, color: colorsGenerated[title] }));
+        .map(title => ({ title, color: getColor(group, title) }));
 
       setLegends(legends);
     };
 
     // Вызовы
-    generateLegends("Distributor", "DistributorLayer", setDistributorLegends);
-    generateLegends("Region / HSR", "HSRLayer", setHSRLegends);
-    generateLegends("Manager", "ManagerLayer", setManagerLegends);
-    generateLegends("Territory", "TerritoryLayer", setTerritoryLegends);
+    generateLegends("Distributor", "DistributorLayer", "distributors", setDistributorLegends);
+    generateLegends("Region / HSR", "HSRLayer", "hsr", setHSRLegends);
+    generateLegends("Manager", "ManagerLayer", "managers", setManagerLegends);
+    generateLegends("Territory", "TerritoryLayer", "territories", setTerritoryLegends);
 
 
   }, [excelData, selectedRegionView, selectedLayers, filters.region, filters.hsr, filters.distributor, filters.mapChannel, filters.manager, filters.territory, filters.salesChannel, filters.generalSalesChannel, heatMapOn, changeColors]);
@@ -776,7 +930,8 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
       r,
       "Дистр",        // новая таблица
       "Дистр(?)",     // старая таблица
-      "Distributor"   // англ. вариант
+      "Distributor",   // англ. вариант
+      "Distributor"
     ),
 
     // Верхний уровень (HSR или позиция менеджера)
@@ -882,6 +1037,11 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
     setModalClickedOpen(true);
   };
 
+  const hsrList = [...new Set(excelData.map(r => COLUMN_MAP.hsr(r)).filter(Boolean))]
+  const managerList = [...new Set(excelData.map(r => COLUMN_MAP.manager(r)).filter(Boolean))];
+  const territoryList = [...new Set(excelData.map(r => COLUMN_MAP.territory(r)).filter(Boolean))];
+  const distributorList = [...new Set(excelData.map(r => COLUMN_MAP.distributor(r)).filter(Boolean))];
+
   return (
     <>
       <MapContainer center={[61, 105]} zoom={3} style={{ height: "100vh", width: "100%" }} className="map">
@@ -923,7 +1083,7 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
         <RegionsEditorModal openModal={() => setRegionsEditorModalOpen(prev => !prev)} />
         <ButtonBug setHeaderRange={setHeaderRange} />
         <button className="style-map--button" onClick={() => setStyleMap(prev => !prev)} title="Изменить стиль карты"><img src={styleMap ? openedEyeIcon : closedEyeIcon} alt="Глаз" /></button>
-        <button className="style-map--button button--colors" onClick={shuffleColors} title="Перемешать цвета" ><img src={colorsIcon} /></button>
+        <button className="style-map--button button--colors" onClick={() => setColorsModalOpen(true)} title="Перемешать цвета" ><img src={colorsIcon} /></button>
       </MapContainer>
       <>
         {regionsEditorModalOpen && <RegionsEditorModalContent initRegionsData={regionsByArea} onChange={setRegionsData} onClose={() => setRegionsEditorModalOpen(false)} />}
@@ -936,6 +1096,20 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
         )}
         {modalMessageVisible && (
           <ModalMessage message={'Не забудьте выключить все слои для корректного отображения'} isError={false} onClose={() => setModalMessageVisible(false)} messageError={''} />
+        )}
+
+        {colorsModalOpen && (
+          <ColorsModal
+            open={colorsModalOpen}
+            onClose={() => setColorsModalOpen(false)}
+            colors={colorsRef.current}
+            regions={Object.keys(DEFAULT_REGION_COLORS)}
+            hsr={hsrList}
+            managers={managerList}
+            territories={territoryList}
+            distributors={distributorList}
+            onChangeColor={updateColor}
+          />
         )}
       </>
     </>

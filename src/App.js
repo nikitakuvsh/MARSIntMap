@@ -77,9 +77,9 @@ function App() {
           </>
         )}
       </div>
-      <div className="table__content">
+      {/* <div className="table__content">
         {!showEdu && <Table excelData={excelData} filters={filters} setTableValues={setTableValues} selectedRegionView={selectedRegionView} />}
-      </div>
+      </div> */}
     </div>
   );
 }
