@@ -361,6 +361,7 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
     const colors = colorsRef.current;
 
     regions.forEach(region => {
+      if (!colors?.regions) colors.regions = {};
       if (!colors.regions[region]) {
         colors.regions[region] =
           DEFAULT_REGION_COLORS[region] ||
