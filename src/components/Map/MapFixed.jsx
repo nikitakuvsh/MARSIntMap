@@ -425,7 +425,7 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
 
     };
 
-    const safeSelectedRegionView = Array.isArray(selectedRegionView) ? selectedRegionView : []; 
+    const safeSelectedRegionView = Array.isArray(selectedRegionView) ? selectedRegionView : [];
 
     const rowInActiveRegion = r => {
       const excelRegions = resolveRegionSynonyms(COLUMN_MAP.region(r));
@@ -478,8 +478,16 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
       const territoryRaw = COLUMN_MAP.territory(r);
       const territoryName = territoryRaw ? String(territoryRaw) : "";
 
-      const allowedChannels = CHANNEL_GROUPS[filters.mapChannel] || [filters.mapChannel];
-      const byMapChannel = !filters.mapChannel || allowedChannels.some(ch => managerName.startsWith(ch));
+      // 👇 ИСПОЛЬЗУЕМ CHANNEL_GROUPS
+      let byMapChannel = true;
+      if (filters.mapChannel) {
+        // Получаем разрешённые каналы из CHANNEL_GROUPS
+        const allowedChannels = CHANNEL_GROUPS[filters.mapChannel] || [filters.mapChannel];
+
+        // Если allowedChannels - массив (всегда), проверяем любой
+        byMapChannel = allowedChannels.some(ch => managerName.startsWith(ch));
+      }
+
       const byFiltersManager = !filters.manager?.length || filters.manager.includes(managerName);
       const byFiltersTerritory =
         selected === "TerritoryLayer"
@@ -965,6 +973,8 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
     const regionName = feature.properties.shapeName;
     const layerRegions = resolveRegionSynonyms(regionName);
 
+    const allowedChannels = CHANNEL_GROUPS[filters.mapChannel] || [filters.mapChannel];
+
     // 🔹 Фильтруем строки по региону и фильтрам
     const rows = excelData.filter(r => {
       const excelRegions = resolveRegionSynonyms(COLUMN_MAP.region(r));
@@ -973,8 +983,10 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
 
       if (filters.mapChannel) {
         const managerName = COLUMN_MAP.manager(r) || "";
-        if (!managerName.startsWith(filters.mapChannel)) return false;
+        const isMatch = allowedChannels.some(ch => managerName.startsWith(ch));
+        if (!isMatch) return false;
       }
+
 
       if (filters.hsr?.length && !filters.hsr.includes(COLUMN_MAP.hsr(r))) return false;
       if (filters.manager?.length && !filters.manager.includes(COLUMN_MAP.manager(r))) return false;
