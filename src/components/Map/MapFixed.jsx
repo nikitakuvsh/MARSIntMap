@@ -423,6 +423,12 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
         "Территория"          // альтернативное название
       ),
 
+      channel: r => pick(
+        r,
+        "Channel",
+        "channel"
+      ),
+
     };
 
     const safeSelectedRegionView = Array.isArray(selectedRegionView) ? selectedRegionView : [];
@@ -494,7 +500,10 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
           ? !filters.territory?.length || filters.territory.includes(territoryName)
           : true;
 
-      return byMapChannel && byFiltersManager && byFiltersTerritory;
+      const byDistrExecution = !filters.distrExecution || COLUMN_MAP.channel(r) === filters.distrExecution;
+      
+
+      return byMapChannel && byFiltersManager && byFiltersTerritory && byDistrExecution;
     };
 
     geoJsonRef.current.eachLayer(layer => {
@@ -625,9 +634,10 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
           const byHSR = !filters.hsr?.length || filters.hsr.includes(hsr);
           const byManager = !filters.manager?.length || filters.manager.includes(manager);
           const byDistributor = !filters.distributor?.length || filters.distributor.includes(distributor);
+          const byDistrExecution = !filters.distrExecution || COLUMN_MAP.channel(r) === filters.distrExecution;
           console.log(`[DISTRIBUTORS] ${byDistributor}`);
 
-          return byHSR && byManager && byDistributor;
+          return byHSR && byManager && byDistributor && byDistrExecution;
         });
 
         const distributorsRaw = filteredRows
@@ -802,8 +812,10 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
 
           const byFiltersManager =
             !filters.manager?.length || filters.manager.includes(managerName);
+          
+          const byDistrExecution = !filters.distrExecution || COLUMN_MAP.channel(r) === filters.distrExecution;
 
-          return byMapChannel && byFiltersManager;
+          return byMapChannel && byFiltersManager && byDistrExecution;
         });
 
         const managers = [...new Set(
@@ -841,7 +853,9 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
           const byFiltersTerritory =
             !filters.territory?.length || filters.territory.includes(territoryName);
 
-          return byMapChannel && byFiltersTerritory;
+          const byDistrExecution = !filters.distrExecution || COLUMN_MAP.channel(r) === filters.distrExecution;
+
+          return byMapChannel && byFiltersTerritory && byDistrExecution;
         });
 
         const territories = [...new Set(
@@ -897,8 +911,9 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
             const byFiltersTerritory = selected === "TerritoryLayer"
               ? !filters.territory?.length || filters.territory.includes(territoryName)
               : true;
+            const byDistrExecution = !filters.distrExecution || COLUMN_MAP.channel(r) === filters.distrExecution;
 
-            return byMapChannel && byFiltersManager && byFiltersTerritory;
+            return byMapChannel && byFiltersManager && byFiltersTerritory && byDistrExecution;
           }
 
           return true;
@@ -925,7 +940,7 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
     generateLegends("Territory", "TerritoryLayer", "territories", setTerritoryLegends);
 
 
-  }, [excelData, selectedRegionView, selectedLayers, filters.region, filters.hsr, filters.distributor, filters.mapChannel, filters.manager, filters.territory, filters.salesChannel, filters.generalSalesChannel, heatMapOn, changeColors]);
+  }, [excelData, selectedRegionView, selectedLayers, filters.region, filters.hsr, filters.distributor, filters.mapChannel, filters.manager, filters.territory, filters.salesChannel, filters.generalSalesChannel, heatMapOn, changeColors, filters.distrExecution]);
 
   const COLUMN_MAP = {
     // Названия регионов/областей
@@ -965,6 +980,13 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
       "Позиция сотрудника", // новая таблица
       "Territory",          // старая таблица
       "Территория"          // альтернативное название
+    ),
+
+  
+    channel: r => pick(
+      r,
+      "Channel",
+      "channel"
     ),
 
   };

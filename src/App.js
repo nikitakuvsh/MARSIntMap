@@ -17,6 +17,7 @@ function App() {
     mapChannel: "",
     generalSalesChannel: "",
     salesChannel: "",
+    distrExecution: "",
     region: [],
     hsr: [],
     manager: [],
