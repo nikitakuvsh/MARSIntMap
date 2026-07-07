@@ -141,6 +141,8 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
     return colors.hsr[key];
   };
 
+  const saveTimeout = useRef(null);
+
   const updateColor = (group, key, color) => {
     const next = structuredClone(colorsRef.current);
 
@@ -149,35 +151,14 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
     }
 
     next[group][key] = color;
-
     colorsRef.current = next;
-    savedColors(next);
+    clearTimeout(saveTimeout.current);
+
+    saveTimeout.current = setTimeout(() => {
+      savedColors(next);
+    }, 300);
   };
 
-  const getRegionColor = (region) => {
-    const customColor = colorsRef.current?.regions?.[region];
-
-    if (customColor) {
-      return customColor;
-    }
-
-    return DEFAULT_REGION_COLORS[region] || "#888";
-  }
-
-  const shuffleColors = () => {
-    const keys = Object.keys(colorsRef.current);
-
-    const newColors = {};
-    keys.forEach(k => {
-      newColors[k] =
-        "#" + Math.floor(Math.random() * 0xffffff)
-          .toString(16)
-          .padStart(6, "0");
-    });
-
-    colorsRef.current = newColors;
-    savedColors(newColors);
-  };
 
   const parseNumber = (val) => {
     if (val === null || val === undefined || val === "") return 0;
@@ -330,23 +311,6 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
     return regionSynonyms[key] || [region]; // если синонимов нет — возвращаем сам регион
   };
 
-  function cutBand(polygon, startLat, endLat) {
-    const bbox = turf.bbox(polygon);
-    const [minLng, , maxLng] = bbox;
-
-    const band = turf.polygon([[
-      [minLng - 5, startLat],
-      [maxLng + 5, startLat],
-      [maxLng + 5, endLat],
-      [minLng - 5, endLat],
-      [minLng - 5, startLat],
-    ]]);
-
-    const inside = turf.intersect(turf.featureCollection([polygon, band]));
-    const outside = turf.difference(turf.featureCollection([polygon, band]));
-
-    return { inside, outside };
-  }
 
   useEffect(() => {
     if (!geoData) return;
@@ -379,8 +343,6 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
 
   useEffect(() => {
     if (!geoJsonRef.current || !excelData.length) return;
-
-    const colorsGenerated = colorsRef.current;
     const newHsrMarkers = [];
 
     const COLUMN_MAP = {
@@ -458,7 +420,6 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
           : null;
 
       if (!coordsArray) return;
-      const zero = 0;
 
       coordsArray.forEach(ringSet => {
         if (!ringSet || !Array.isArray(ringSet)) return;
@@ -477,34 +438,6 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
       });
     };
 
-    const filterRow = (r, selected = null) => {
-      const managerRaw = COLUMN_MAP.manager(r);
-      const managerName = managerRaw ? String(managerRaw) : "";
-
-      const territoryRaw = COLUMN_MAP.territory(r);
-      const territoryName = territoryRaw ? String(territoryRaw) : "";
-
-      // 👇 ИСПОЛЬЗУЕМ CHANNEL_GROUPS
-      let byMapChannel = true;
-      if (filters.mapChannel) {
-        // Получаем разрешённые каналы из CHANNEL_GROUPS
-        const allowedChannels = CHANNEL_GROUPS[filters.mapChannel] || [filters.mapChannel];
-
-        // Если allowedChannels - массив (всегда), проверяем любой
-        byMapChannel = allowedChannels.some(ch => managerName.startsWith(ch));
-      }
-
-      const byFiltersManager = !filters.manager?.length || filters.manager.includes(managerName);
-      const byFiltersTerritory =
-        selected === "TerritoryLayer"
-          ? !filters.territory?.length || filters.territory.includes(territoryName)
-          : true;
-
-      const byDistrExecution = !filters.distrExecution || COLUMN_MAP.channel(r) === filters.distrExecution;
-      
-
-      return byMapChannel && byFiltersManager && byFiltersTerritory && byDistrExecution;
-    };
 
     geoJsonRef.current.eachLayer(layer => {
       const name = layer.feature?.properties?.shapeName;
