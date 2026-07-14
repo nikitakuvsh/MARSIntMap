@@ -61,6 +61,7 @@ function App() {
               onSelectRegion={setSelectedRegion}
               setSelectedRegion={setSelectedRegion}
               setSelectedRegionView={setSelectedRegionView}
+              selectedRegionView={selectedRegionView}
               excelData={excelData}
               setExcelData={setExcelData}
               filters={filters}

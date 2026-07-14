@@ -562,15 +562,16 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
           const hsr = COLUMN_MAP.hsr(r);
           const manager = COLUMN_MAP.manager(r);
           const distributor = COLUMN_MAP.distributor(r);
+          const territoryName = COLUMN_MAP.territory(r);
 
 
           const byHSR = !filters.hsr?.length || filters.hsr.includes(hsr);
           const byManager = !filters.manager?.length || filters.manager.includes(manager);
           const byDistributor = !filters.distributor?.length || filters.distributor.includes(distributor);
           const byDistrExecution = !filters.distrExecution || COLUMN_MAP.channel(r) === filters.distrExecution;
-          console.log(`[DISTRIBUTORS] ${byDistributor}`);
+          const byFiltersTerritory = !filters.territory?.length || filters.territory.includes(territoryName);
 
-          return byHSR && byManager && byDistributor && byDistrExecution;
+          return byHSR && byManager && byDistributor && byDistrExecution && byFiltersTerritory;
         });
 
         const distributorsRaw = filteredRows
@@ -737,6 +738,9 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
 
         const managerRowsFiltered = rows.filter(r => {
           const managerName = COLUMN_MAP.manager(r);
+          const territoryName = COLUMN_MAP.territory(r);
+          const distributor = COLUMN_MAP.distributor(r);
+          const hsr = COLUMN_MAP.hsr(r);
           if (!managerName) return false;
 
           const allowedChannels = CHANNEL_GROUPS[filters.mapChannel] || [filters.mapChannel];
@@ -747,8 +751,11 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
             !filters.manager?.length || filters.manager.includes(managerName);
           
           const byDistrExecution = !filters.distrExecution || COLUMN_MAP.channel(r) === filters.distrExecution;
+          const byFiltersTerritory = !filters.territory?.length || filters.territory.includes(territoryName);
+          const byDistributor = !filters.distributor?.length || filters.distributor.includes(distributor);
+          const byHSR = !filters.hsr?.length || filters.hsr.includes(hsr);
 
-          return byMapChannel && byFiltersManager && byDistrExecution;
+          return byMapChannel && byFiltersManager && byDistrExecution && byFiltersTerritory && byDistributor && byHSR;
         });
 
         const managers = [...new Set(
@@ -777,8 +784,9 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
           if (!territoryName) return false;
 
           const allowedChannels = CHANNEL_GROUPS[filters.mapChannel] || [filters.mapChannel];
-
+          const hsr = COLUMN_MAP.hsr(r);
           const managerName = COLUMN_MAP.manager(r) || "";
+          const distributor = COLUMN_MAP.distributor(r);
 
           const byMapChannel =
             !filters.mapChannel || allowedChannels.some(ch => managerName.startsWith(ch));
@@ -787,8 +795,11 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
             !filters.territory?.length || filters.territory.includes(territoryName);
 
           const byDistrExecution = !filters.distrExecution || COLUMN_MAP.channel(r) === filters.distrExecution;
+          const byDistributor = !filters.distributor?.length || filters.distributor.includes(distributor);
+          const byManager = !filters.manager?.length || filters.manager.includes(managerName);
+          const byHSR = !filters.hsr?.length || filters.hsr.includes(hsr);
 
-          return byMapChannel && byFiltersTerritory && byDistrExecution;
+          return byMapChannel && byFiltersTerritory && byDistrExecution && byManager && byDistributor && byHSR;
         });
 
         const territories = [...new Set(
@@ -817,54 +828,98 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
     setHsrMarkers(newHsrMarkers);
 
     // ===== Легенды =====
-    const generateLegends = (key, selected, group, setLegends) => {
-      if (!selectedLayers.includes(selected)) { setLegends([]); return; }
 
-      const legends = excelData
-        .filter(rowInActiveRegion)
-        .filter(r => {
-          if (selected === "HSRLayer") {
-            return !filters.hsr?.length || filters.hsr.includes(COLUMN_MAP.hsr(r));
-          }
+    const applyMapFilters = (row) => {
+  if (!rowInActiveRegion(row)) return false;
 
-          console.log("TERRITORY CHECK", {
-            selectedLayers, sampleTerritory: COLUMN_MAP.territory(excelData[0]), selectedRegionView,
-          });
+  const managerName = String(COLUMN_MAP.manager(row) || "");
+  const territoryName = String(COLUMN_MAP.territory(row) || "");
+  const distributorName = String(COLUMN_MAP.distributor(row) || "");
+  const hsrName = String(COLUMN_MAP.hsr(row) || "");
 
-          if (selected === "ManagerLayer" || selected === "TerritoryLayer") {
-            const managerRaw = COLUMN_MAP.manager(r);
-            const managerName = managerRaw ? String(managerRaw) : "";
+  const allowedChannels =
+    CHANNEL_GROUPS[filters.mapChannel] || [filters.mapChannel];
 
-            // фильтруем по каналу и выбранным менеджерам
-            const allowedChannels = CHANNEL_GROUPS[filters.mapChannel] || [filters.mapChannel];
-            const byMapChannel = !filters.mapChannel || allowedChannels.some(ch => managerName.startsWith(ch));
-            const byFiltersManager = !filters.manager?.length || filters.manager.includes(managerName);
-            const territoryRaw = COLUMN_MAP.territory(r);
-            const territoryName = territoryRaw ? String(territoryRaw) : "";
-            const byFiltersTerritory = selected === "TerritoryLayer"
-              ? !filters.territory?.length || filters.territory.includes(territoryName)
-              : true;
-            const byDistrExecution = !filters.distrExecution || COLUMN_MAP.channel(r) === filters.distrExecution;
+  if (
+    filters.mapChannel &&
+    !allowedChannels.some(ch => managerName.startsWith(ch))
+  ) {
+    return false;
+  }
 
-            return byMapChannel && byFiltersManager && byFiltersTerritory && byDistrExecution;
-          }
+  if (
+    filters.distrExecution &&
+    COLUMN_MAP.channel(row) !== filters.distrExecution
+  ) {
+    return false;
+  }
 
-          return true;
-        })
-        .map(r => {
-          if (key === "Distributor") return COLUMN_MAP.distributor(r);
-          if (key === "Region / HSR") return COLUMN_MAP.hsr(r);
-          if (key === "Manager") return COLUMN_MAP.manager(r);
-          if (key === "Territory") return COLUMN_MAP.territory(r);
+  if (
+    filters.distributor?.length &&
+    !filters.distributor.includes(distributorName)
+  ) {
+    return false;
+  }
+
+  if (
+    filters.hsr?.length &&
+    !filters.hsr.includes(hsrName)
+  ) {
+    return false;
+  }
+
+  if (
+    filters.manager?.length &&
+    !filters.manager.includes(managerName)
+  ) {
+    return false;
+  }
+
+  if (
+    filters.territory?.length &&
+    !filters.territory.includes(territoryName)
+  ) {
+    return false;
+  }
+
+  return true;
+};
+
+   const generateLegends = (key, selected, group, setLegends) => {
+  if (!selectedLayers.includes(selected)) {
+    setLegends([]);
+    return;
+  }
+
+  const legends = excelData
+    .filter(applyMapFilters)
+    .map(r => {
+      switch (key) {
+        case "Distributor":
+          return COLUMN_MAP.distributor(r);
+
+        case "Region / HSR":
+          return COLUMN_MAP.hsr(r);
+
+        case "Manager":
+          return COLUMN_MAP.manager(r);
+
+        case "Territory":
+          return COLUMN_MAP.territory(r);
+
+        default:
           return null;
-        })
-        .filter(Boolean)
-        // убираем повторяющиеся значения
-        .filter((v, i, a) => a.findIndex(x => x === v) === i)
-        .map(title => ({ title, color: getColor(group, title) }));
+      }
+    })
+    .filter(Boolean)
+    .filter((v, i, a) => a.indexOf(v) === i)
+    .map(title => ({
+      title,
+      color: getColor(group, title),
+    }));
 
-      setLegends(legends);
-    };
+  setLegends(legends);
+};
 
     // Вызовы
     generateLegends("Distributor", "DistributorLayer", "distributors", setDistributorLegends);
