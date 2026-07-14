@@ -60,7 +60,6 @@ export default function ModalClicked({ data = null, filters, onClose }) {
         case 'Merch-model SO': columns.push('Merch-model SO'); break;
         case 'NA Leading': columns.push('NA Leading'); break;
         case 'RKA Leading': columns.push('RKA Leading'); break;
-        default: return null;
       }
     });
 

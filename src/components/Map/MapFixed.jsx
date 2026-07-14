@@ -20,6 +20,7 @@ import HeatLegends from "./HeatLegends/HeatLegends";
 import ModalMessage from "../ModalMessage/ModalMessage";
 import colorsIcon from '../../images/icons/colors.svg';
 import ColorsModal from "../ColorsModal/ColorsModal";
+import { normalizeChannels } from "./utils/channelUtils";
 
 export default function MapLeaflet({ selectedRegion, setSelectedRegion, selectedRegionView = [], setSelectedRegionView, excelData = [], mapDataColumn = null, mapDataColumnValues = [], regionsByArea, setRegionsData, filters, setHeaderRange, headerRange, showEdu }) {
   const [geoData, setGeoData] = useState(null);
@@ -485,49 +486,45 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
         layer._tempPolygons = [];
 
         if (!layer.feature || !layer.feature.geometry) return;
-        const channel = filters.generalSalesChannel || filters.salesChannel || ""; // выбранный канал
+        const channels = normalizeChannels(
+          filters.generalSalesChannel?.length ? filters.generalSalesChannel : filters.salesChannel
+        );
 
-        // формируем columnNames для выбранного канала
         let columnNames = [];
-        switch (channel) {
-          case "Non-Skyline":
-            columnNames = ["Non-Skyline"];
-            break;
-          case "Skyline":
-            columnNames = ["Skyline"];
-            break;
-          case "SO NA (w/o Chizhik)":
-            columnNames = ["SO NA (w/o Chizhik)"]
-            break;
-          case "SO RKA (execution)":
-            columnNames = ["SO RKA (execution)"];
-            break;
-          case "RKA":
-            columnNames = ["RKA"];
-            break;
-          case "Merch-model SO":
-            columnNames = ["Merch-model SO"];
-            break;
-          case "NA Leading":
-            columnNames = ["NA Leading"];
-            break;
-          case "RKA Leading":
-            columnNames = ["RKA Leading"];
-            break;
 
-          case "Distr trade":
-            columnNames = ["Non-Skyline", "Skyline"]
-            break;
+        channels.forEach(channel => {
 
-          case "Execution":
-            columnNames = [
-              "SO NA (w/o Chizhik)",
-              "SO RKA (execution)"
-            ];
-            break;
-          default:
-            columnNames = [];
-        }
+          switch (channel) {
+
+            case "RKA":
+              columnNames.push("RKA");
+              break;
+
+            case "Distr trade":
+              columnNames.push(
+                "Non-Skyline",
+                "Skyline"
+              );
+              break;
+
+            case "Execution":
+              columnNames.push(
+                "SO NA (w/o Chizhik)",
+                "SO RKA (execution)"
+              );
+              break;
+
+            case "Merch-model SO":
+              columnNames.push(
+                "Merch-model SO"
+              );
+              break;
+
+            default: return null;
+
+          }
+
+        });
 
         // totalValue для цвета
         console.log("ROW SAMPLE", rows[0]);
@@ -561,7 +558,7 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
         setHeatLegendValues({ min, avg, max });
 
         // цвет для полигона
-        const avgKey = !filters.generalSalesChannel ? channel + " avg" : "general " + channel.toLowerCase() + " avg";
+        const avgKey = filters.generalSalesChannel?.length ? "general combined avg" : `${filters.salesChannel} avg`;
         const avgChannel = CHANNEL_AVGS[avgKey] || 1;
         if (totalValue > 0) {
           const color = getHeatColor(totalValue, avgChannel);
@@ -1231,21 +1228,33 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
     });
 
     // 🔹 Выбираем колонны для выбранного канала
-    const channel = filters.generalSalesChannel || filters.salesChannel || "";
+    const selectedGeneralChannels = Array.isArray(filters.generalSalesChannel)
+      ? filters.generalSalesChannel.filter(Boolean)
+      : filters.generalSalesChannel
+        ? [filters.generalSalesChannel]
+        : [];
+
+    const channels = Array.isArray(filters.generalSalesChannel)
+  ? filters.generalSalesChannel
+  : filters.generalSalesChannel
+    ? [filters.generalSalesChannel]
+    : [];
     let columnNames = [];
-    switch (channel) {
-      case "Non-Skyline": columnNames = ["Non-Skyline"]; break;
-      case "Skyline": columnNames = ["Skyline"]; break;
-      case "SO NA (w/o Chizhik)": columnNames = ["SO NA (w/o Chizhik)"]; break;
-      case "SO RKA (execution)": columnNames = ["SO RKA (execution)"]; break;
-      case "RKA": columnNames = ["RKA"]; break;
-      case "Merch-model SO": columnNames = ["Merch-model SO"]; break;
-      case "NA Leading": columnNames = ["NA Leading"]; break;
-      case "RKA Leading": columnNames = ["RKA Leading"]; break;
-      case "Distr trade": columnNames = ["Non-Skyline", "Skyline"]; break;
-      case "Execution": columnNames = ["SO NA (w/o Chizhik)", "SO RKA (execution)"]; break;
-      default: columnNames = [];
+    channels.forEach(channel => {
+       switch (channel) {
+      case "Non-Skyline": columnNames.push("Non-Skyline"); break;
+      case "Skyline": columnNames.push("Skyline"); break;
+      case "SO NA (w/o Chizhik)": columnNames.push("SO NA (w/o Chizhik)"); break;
+      case "SO RKA (execution)": columnNames.push("SO RKA (execution)"); break;
+      case "RKA": columnNames.push("RKA"); break;
+      case "Merch-model SO": columnNames.push("Merch-model SO"); break;
+      case "NA Leading": columnNames.push("NA Leading"); break;
+      case "RKA Leading": columnNames.push("RKA Leading"); break;
+      case "Distr trade": columnNames.push("Non-Skyline", "Skyline"); break;
+      case "Execution": columnNames.push("SO NA (w/o Chizhik)", "SO RKA (execution)"); break;
+      default: break;
     }
+    })
 
     // 🔹 Сумма по выбранным фильтрам
     const total = rows.reduce((sum, r) => {
@@ -1260,12 +1269,15 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
     });
 
     // 🔹 Среднее берём из CHANNEL_AVGS
-    const avgKey = !filters.generalSalesChannel ? channel + " avg" : "general " + channel.toLowerCase() + " avg";
+    const avgKey = selectedGeneralChannels.length > 1
+      ? "general combined avg"
+      : `${channels[0] ?? filters.salesChannel} avg`;
     const avg = CHANNEL_AVGS[avgKey] ?? 0;
 
     // 🔹 Формируем объект для модалки
     const regionData = {
       region: regionName,
+      rows,
       hsr: [...new Set(rows.map(r => COLUMN_MAP.hsr(r)).filter(Boolean))],
       managers: [...new Set(rows.map(r => COLUMN_MAP.manager(r)).filter(Boolean))],
       territories: [...new Set(rows.map(r => COLUMN_MAP.territory(r)).filter(Boolean))],
@@ -1275,12 +1287,12 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
       countEmployees: [...new Set(rows.map(r => COLUMN_MAP.countEmployees(r)).filter(Boolean))]
     };
 
+
     // Добавляем total и avg только если total больше 0
     if (total > 0) {
       regionData.total = total;
       regionData.avg = avg;
       regionData.breakdown = breakdown;
-      regionData.channel = channel;
     }
 
 

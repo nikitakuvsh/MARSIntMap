@@ -12,7 +12,7 @@ import './FiltersDiv.css';
 import FiltersGeneralSalesChannels from "./FiltersGeneralSalesChannels";
 import FiltersDistrExecution from "./FiltersDistrExecution";
 
-export default function FiltersDiv({ onSelectRegion, setSelectedRegion, setSelectedRegionView, excelData, setExcelData, filters, setFilters, tableValues, regionsByArea, sheetNames, setSheetNames, activeSheet, setActiveSheet, workbook, setWorkbook, headerRange }){
+export default function FiltersDiv({ onSelectRegion, setSelectedRegion, setSelectedRegionView, selectedRegionView, excelData, setExcelData, filters, setFilters, tableValues, regionsByArea, sheetNames, setSheetNames, activeSheet, setActiveSheet, workbook, setWorkbook, headerRange }){
 
     return (
         <div className="filters">
@@ -29,7 +29,7 @@ export default function FiltersDiv({ onSelectRegion, setSelectedRegion, setSelec
                     <FiltersGeneralSalesChannels filters={filters} setFilters={setFilters} />
                     {/* <FiltersSalesChannels filters={filters} setFilters={setFilters} /> */}
                     <FiltersPosition excelData={excelData} filters={filters} setFilters={setFilters} setSelectedRegionView={setSelectedRegionView} />
-                    <FiltersManagers excelData={excelData} filter={filters} setFilters={setFilters} setSelectedRegionView={setSelectedRegionView} />
+                    <FiltersManagers excelData={excelData} filter={filters} setFilters={setFilters} selectedRegionView={selectedRegionView} />
                     {/* <FiltersMapInformation filters={filters} setFilters={setFilters} tableValues={tableValues} />  */}
                 </>
             )}

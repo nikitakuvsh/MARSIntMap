@@ -16,15 +16,15 @@ export default function FiltersDistrExecution({ filters, setFilters }) {
           const distrExecution = e.target.value;
 
           const channelMap = {
-            "RKA": "RKA",
-            "Execution": "Merch-model SO",
-            "Distr trade": "Distr trade"
+            RKA: ["RKA"],
+            Execution: ["Merch-model SO"],
+            "Distr trade": ["Distr trade"]
           };
 
           setFilters({
             ...filters,
             distrExecution,
-            generalSalesChannel: channelMap[distrExecution] || ""
+            generalSalesChannel: channelMap[distrExecution] || []
           });
         }}
       >
