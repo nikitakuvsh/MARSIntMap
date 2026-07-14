@@ -1345,10 +1345,10 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
         <ButtonLayers excelData={excelData} distributorLegends={distributorLegends} setDistributorLegends={setDistributorLegends} selectedLayers={selectedLayers} setSelectedLayers={setSelectedLayers} setHSRLegends={setHSRLegends} setManagerLegends={setManagerLegends} setTerritoryLegends={setTerritoryLegends} merchAgencyLegends={merchAgencyLegends} setMerchAgencyLegends={setMerchAgencyLegends} />
         {!heatMapOn && (<MapLegends distributorLegends={distributorLegends} hsrLegends={hsrLegends} managerLegends={managerLegends} territoryLegends={territoryLegends} merchAgencyLegends={merchAgencyLegends} />)}
         {heatMapOn && (<HeatLegends min={heatLegendValues.min} avg={heatLegendValues.avg} max={heatLegendValues.max} />)}
-        <RegionsEditorModal openModal={() => setRegionsEditorModalOpen(prev => !prev)} />
+        {/* <RegionsEditorModal openModal={() => setRegionsEditorModalOpen(prev => !prev)} /> */}
         <ButtonBug setHeaderRange={setHeaderRange} />
-        <button className="style-map--button" onClick={() => setStyleMap(prev => !prev)} title="Изменить стиль карты"><img src={styleMap ? openedEyeIcon : closedEyeIcon} alt="Глаз" /></button>
-        <button className="style-map--button button--colors" onClick={() => setColorsModalOpen(true)} title="Перемешать цвета" ><img src={colorsIcon} /></button>
+        <button className="style-map--button" onClick={() => setStyleMap(prev => !prev)} title="Изменить стиль карты"><img src={styleMap ? openedEyeIcon : closedEyeIcon} alt="Глаз" className="icon--invert" /></button>
+        <button className="style-map--button button--colors" onClick={() => setColorsModalOpen(true)} title="Перемешать цвета" ><img src={colorsIcon} className="icon--invert" alt="Палитра"/></button>
       </MapContainer>
       <>
         {regionsEditorModalOpen && <RegionsEditorModalContent initRegionsData={regionsByArea} onChange={setRegionsData} onClose={() => setRegionsEditorModalOpen(false)} />}

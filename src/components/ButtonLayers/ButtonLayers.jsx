@@ -111,7 +111,7 @@ export default function ButtonLayers({
     return (
         <>
             <button className="button-layers" title="layers" onClick={() => setListView(v => !v)}>
-                <img className="button-layers__icon" alt="layers" src={layersIcon} />
+                <img className="button-layers__icon icon--invert" alt="layers" src={layersIcon} />
             </button>
 
             {listView && (

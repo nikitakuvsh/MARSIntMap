@@ -109,6 +109,11 @@ body.dark-theme .style-map--button:hover {
     background-color: #555555 !important;
 }
 
+body.dark-theme .icon--invert {
+    filter: invert(0.85);
+}
+
+
 select, button {
     cursor: pointer;
 }
@@ -129,4 +134,9 @@ select, button {
 
 #root > div > div.page__content > div.map.leaflet-container.leaflet-touch.leaflet-fade-anim.leaflet-grab.leaflet-touch-drag.leaflet-touch-zoom > div.leaflet-control-container > div.leaflet-bottom.leaflet-right {
     display: none !important;
+}
+
+img {
+    user-select: none !important;
+    -webkit-user-drag: none !important;
 }
