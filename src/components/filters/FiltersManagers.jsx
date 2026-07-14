@@ -4,13 +4,15 @@ export default function FiltersManagers({ excelData = [], filter = {}, setFilter
   const [managersForHSR, setManagersForHSR] = useState([]);
   const [territoriesForManager, setTerritoriesForManager] = useState([]);
   const [distributorsForTerritory, setDistributorsForTerritory] = useState([]);
+  const [merchAgenciesForDistributor, setMerchAgenciesForDistributor] = useState([]);
 
   // Мемоизируем безопасный фильтр, чтобы ссылка не менялась каждый рендер
   const safeFilter = useMemo(() => ({
     region: Array.isArray(filter.region) ? filter.region : [],
     manager: Array.isArray(filter.manager) ? filter.manager : [],
     territory: Array.isArray(filter.territory) ? filter.territory : [],
-    distributor: Array.isArray(filter.distributor) ? filter.distributor : []
+    distributor: Array.isArray(filter.distributor) ? filter.distributor : [],
+    merchAgency: Array.isArray(filter.merchAgency) ? filter.merchAgency : []
   }), [filter]);
 
   // ===== MANAGERS =====
@@ -49,7 +51,7 @@ export default function FiltersManagers({ excelData = [], filter = {}, setFilter
         excelData
           .filter(row => !safeFilter.region.length || safeFilter.region.includes(row["Region / HSR"]))
           .filter(row => !filter.hsr?.length || filter.hsr.includes(row["Регион"]))
-          .filter(row => !safeFilter.manager.length || safeFilter.manager.includes(row["Manager"]))
+          .filter(row => !safeFilter.manager.length || safeFilter.manager.includes(row["Manager"] || row["Позиция менеджера"]))
           .filter(row => !filter.distrExecution || row["Channel"] === filter.distrExecution)
           .filter(row => {
             if (!filter.mapChannel) return true;
@@ -102,6 +104,63 @@ export default function FiltersManagers({ excelData = [], filter = {}, setFilter
     });
   }, [excelData, safeFilter.territory, safeFilter.region, filter.distrExecution, filter.mapChannel, setFilters, filter.hsr]);
 
+  // ===== MERCH AGENCY =====
+  useEffect(() => {
+    const merchAgencies = [
+      ...new Set(
+        excelData
+          .filter(row => !safeFilter.region.length || safeFilter.region.includes(row["Region / HSR"]))
+          .filter(row => !filter.hsr?.length || filter.hsr.includes(row["Регион"]))
+          .filter(row => !safeFilter.manager.length || safeFilter.manager.includes(row["Manager"] || row["Позиция менеджера"]))
+          .filter(row => !safeFilter.territory.length || safeFilter.territory.includes(row["Territory"]))
+          .filter(row => !safeFilter.distributor.length || safeFilter.distributor.includes(row["Distributor"] || row["Дистр"]))
+          .filter(row => !filter.distrExecution || row["Channel"] === filter.distrExecution)
+          .filter(row => {
+            if (!filter.mapChannel) return true;
+
+            const manager = row["Manager"] || row["Позиция менеджера"] || "";
+            return String(manager).startsWith(filter.mapChannel);
+          })
+          .map(row =>
+            row["Merch Agency"] ||
+            row["Merch Agencys"] ||
+            row["Merch agency"] ||
+            row["Мерч агенства"]
+          )
+          .filter(Boolean)
+      )
+    ];
+
+
+    setMerchAgenciesForDistributor(merchAgencies);
+
+
+    setFilters(prev => {
+      const newMerch = (prev.merchAgency || [])
+        .filter(m => merchAgencies.includes(m));
+
+      if (JSON.stringify(newMerch) !== JSON.stringify(prev.merchAgency)) {
+        return {
+          ...prev,
+          merchAgency: newMerch
+        };
+      }
+
+      return prev;
+    });
+
+  }, [
+    excelData,
+    safeFilter.region,
+    safeFilter.manager,
+    safeFilter.territory,
+    safeFilter.distributor,
+    filter.distrExecution,
+    filter.mapChannel,
+    filter.hsr,
+    setFilters
+  ]);
+
   // ===== Toggle чекбоксов =====
   const toggleValue = (key, value) => {
     const current = Array.isArray(filter[key]) ? filter[key] : [];
@@ -111,6 +170,7 @@ export default function FiltersManagers({ excelData = [], filter = {}, setFilter
 
     setFilters({ ...filter, [key]: updated });
   };
+
 
   return (
     <>
@@ -141,6 +201,24 @@ export default function FiltersManagers({ excelData = [], filter = {}, setFilter
                 onChange={() => toggleValue("territory", t)}
               />
               {t}
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <div className="filters__group">
+        <label className="filters__label">Merch Agency</label>
+
+        <div className="checkbox-list">
+          {merchAgenciesForDistributor.map(m => (
+            <label key={m} className="checkbox-item">
+              <input
+                type="checkbox"
+                checked={(filter.merchAgency || []).includes(m)}
+                onChange={() => toggleValue("merchAgency", m)}
+              />
+
+              {m}
             </label>
           ))}
         </div>

@@ -88,6 +88,18 @@ export default function ModalClicked({ data = [], filters, onClose }) {
           <b>Distributor:</b> {data.distributors?.join(", ") || "—"}
         </p>
 
+        <p className='map-modal__subtitle'>
+          <b>Merch Agency:</b> {data.merchAgency?.join(", ") || "—"}
+        </p>
+        
+        <p className='map-modal__subtitle'>
+          <b>Количество офисов:</b> {data.countOffices?.reduce((sum, n) => sum + Number(n), 0) || "—"}
+        </p>
+
+        <p className='map-modal__subtitle'>
+          <b>Количество сотрудников:</b> {data.countEmployees?.reduce((sum, n) => sum + Number(n), 0) || "—"}
+        </p>
+
         <div className="map-modal-stats">
           <span><b>{data.channel || filters.salesChannel || "Канал"}:</b></span>
           

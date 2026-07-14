@@ -30,6 +30,7 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
   const [modalMessageVisible, setModalMessageVisible] = useState(false);
   activeRegionsRef.current = activeRegions;
   const [distributorLegends, setDistributorLegends] = useState([]);
+  const [merchAgencyLegends, setMerchAgencyLegends] = useState([]);
   const [hsrLegends, setHSRLegends] = useState([]);
   const [managerLegends, setManagerLegends] = useState([]);
   const [territoryLegends, setTerritoryLegends] = useState([]);
@@ -83,7 +84,8 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
       hsr: {},
       managers: {},
       territories: {},
-      distributors: {}
+      distributors: {},
+      merchAgencies: {}
     };
   };
 
@@ -391,6 +393,27 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
         "channel"
       ),
 
+      merchAgency: r => pick(
+        r,
+        "Merch Agency",
+        "Merch agency",
+        "Merch agencys",
+        "Merch Agencys",
+        "Мерч агенства"
+      ),
+
+      countOffices: r => pick(
+        r,
+        "Count offices",
+        "Количество офисов"
+      ),
+
+      countEmployees: r => pick(
+        r,
+        "Count employees",
+        "Количество сотрудников"
+      )
+
     };
 
     const safeSelectedRegionView = Array.isArray(selectedRegionView) ? selectedRegionView : [];
@@ -563,6 +586,7 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
           const manager = COLUMN_MAP.manager(r);
           const distributor = COLUMN_MAP.distributor(r);
           const territoryName = COLUMN_MAP.territory(r);
+          const merchAgency = COLUMN_MAP.merchAgency(r);
 
 
           const byHSR = !filters.hsr?.length || filters.hsr.includes(hsr);
@@ -570,8 +594,11 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
           const byDistributor = !filters.distributor?.length || filters.distributor.includes(distributor);
           const byDistrExecution = !filters.distrExecution || COLUMN_MAP.channel(r) === filters.distrExecution;
           const byFiltersTerritory = !filters.territory?.length || filters.territory.includes(territoryName);
+          const byMerchAgency = !filters.merchAgency.length || filters.merchAgency.includes(merchAgency);
+          const allowedChannels = CHANNEL_GROUPS[filters.mapChannel] || [filters.mapChannel];
+          const byMapChannel = !filters.mapChannel || allowedChannels.some(ch => manager.startsWith(ch));
 
-          return byHSR && byManager && byDistributor && byDistrExecution && byFiltersTerritory;
+          return byHSR && byManager && byDistributor && byDistrExecution && byFiltersTerritory && byMerchAgency && byMapChannel;
         });
 
         const distributorsRaw = filteredRows
@@ -664,6 +691,165 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
         });
       }
 
+      if (selectedLayers.includes("MerchAgencyLayer") && isSelected) {
+
+        const filteredRows = rows.filter(r => {
+          const hsr = COLUMN_MAP.hsr(r);
+          const manager = COLUMN_MAP.manager(r);
+          const merchAgency = COLUMN_MAP.merchAgency(r);
+          const territoryName = COLUMN_MAP.territory(r);
+          const distributor = COLUMN_MAP.distributor(r);
+
+          const byHSR = !filters.hsr?.length || filters.hsr.includes(hsr);
+          const byManager = !filters.manager?.length || filters.manager.includes(manager);
+          const byMerchAgency = !filters.merchAgency?.length || filters.merchAgency.includes(merchAgency);
+          const byDistrExecution = !filters.distrExecution || COLUMN_MAP.channel(r) === filters.distrExecution;
+          const byFiltersTerritory = !filters.territory?.length || filters.territory.includes(territoryName);
+          const byDistributor = !filters.distributor?.length || filters.distributor.includes(distributor);
+          const allowedChannels = CHANNEL_GROUPS[filters.mapChannel] || [filters.mapChannel];
+          const byMapChannel = !filters.mapChannel || allowedChannels.some(ch => manager.startsWith(ch));
+
+          return (
+            byHSR &&
+            byManager &&
+            byMerchAgency &&
+            byDistrExecution &&
+            byFiltersTerritory &&
+            byDistributor &&
+            byMerchAgency &&
+            byMapChannel
+          );
+        });
+
+
+        const merchAgencysRaw = filteredRows
+          .map(r => pick(
+            r,
+            "Merch Agency",
+            "Merch Agencys",
+            "Мерч агенства"
+          ))
+          .filter(Boolean);
+
+
+        const merchAgencys = [...new Set(merchAgencysRaw)];
+
+        if (merchAgencys.length === 0) return;
+
+
+        // === Цвета ===
+        const colors = [];
+
+        merchAgencys.forEach(m => {
+          colors.push(getColor("merchAgencies", m));
+        });
+
+
+        const scaledFeature = safeScale(layer.feature, 1);
+        if (!scaledFeature) return;
+
+
+        // === Одно агентство ===
+        if (colors.length === 1) {
+          drawPolygonFeature(
+            layer,
+            scaledFeature,
+            colors[0],
+            1,
+            1
+          );
+          return;
+        }
+
+
+        // === Подготовка координат ===
+        let coordsArray = [];
+
+        if (scaledFeature.geometry.type === "Polygon") {
+          coordsArray = [scaledFeature.geometry.coordinates];
+        } else {
+          coordsArray = scaledFeature.geometry.coordinates;
+        }
+
+
+        // === Деление полигона ===
+        coordsArray.forEach(ringSet => {
+
+          ringSet.forEach(ring => {
+
+            if (!ring || ring.length === 0) return;
+
+
+            const lats = ring.map(point => point[1]);
+
+            const minLat = Math.min(...lats);
+            const maxLat = Math.max(...lats);
+
+            const step = (maxLat - minLat) / colors.length;
+
+
+            for (let i = 0; i < colors.length; i++) {
+
+              const low = minLat + step * i;
+              const high = minLat + step * (i + 1);
+
+
+              const partPolygon = ring.map(point => {
+
+                const lng = point[0];
+                const lat = point[1];
+
+
+                if (lat < low) return [lng, low];
+                if (lat > high) return [lng, high];
+
+                return [lng, lat];
+              });
+
+
+              const leafletCoords = partPolygon.map(p => [
+                p[1],
+                p[0]
+              ]);
+
+
+              const poly = L.polygon(
+                leafletCoords,
+                {
+                  color: "#000",
+                  weight: 0,
+                  fillColor: colors[i],
+                  fillOpacity: 1
+                }
+              ).addTo(layer._map);
+
+
+              poly.on("click", () => {
+                console.log("Клик по Merch Agency");
+                handleRegionClick(layer.feature);
+              });
+
+
+              if (!layer._tempPolygons) {
+                layer._tempPolygons = [];
+              }
+
+              layer._tempPolygons.push(poly);
+            }
+
+          });
+
+        });
+
+
+        // === Скрываем оригинальный полигон ===
+        layer.setStyle({
+          fillOpacity: 0,
+          color: "#000",
+          weight: 1
+        });
+      }
+
       const drawSplitPolygon = (layer, feature, colors, onClick) => {
         let coordsArray = [];
 
@@ -741,6 +927,7 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
           const territoryName = COLUMN_MAP.territory(r);
           const distributor = COLUMN_MAP.distributor(r);
           const hsr = COLUMN_MAP.hsr(r);
+          const merchAgency = COLUMN_MAP.merchAgency(r);
           if (!managerName) return false;
 
           const allowedChannels = CHANNEL_GROUPS[filters.mapChannel] || [filters.mapChannel];
@@ -749,13 +936,14 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
 
           const byFiltersManager =
             !filters.manager?.length || filters.manager.includes(managerName);
-          
+
           const byDistrExecution = !filters.distrExecution || COLUMN_MAP.channel(r) === filters.distrExecution;
           const byFiltersTerritory = !filters.territory?.length || filters.territory.includes(territoryName);
           const byDistributor = !filters.distributor?.length || filters.distributor.includes(distributor);
           const byHSR = !filters.hsr?.length || filters.hsr.includes(hsr);
+          const byMerchAgency = !filters.merchAgency.length || filters.merchAgency.includes(merchAgency);
 
-          return byMapChannel && byFiltersManager && byDistrExecution && byFiltersTerritory && byDistributor && byHSR;
+          return byMapChannel && byFiltersManager && byDistrExecution && byFiltersTerritory && byDistributor && byHSR && byMerchAgency;
         });
 
         const managers = [...new Set(
@@ -787,6 +975,7 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
           const hsr = COLUMN_MAP.hsr(r);
           const managerName = COLUMN_MAP.manager(r) || "";
           const distributor = COLUMN_MAP.distributor(r);
+          const merchAgency = COLUMN_MAP.merchAgency(r);
 
           const byMapChannel =
             !filters.mapChannel || allowedChannels.some(ch => managerName.startsWith(ch));
@@ -798,8 +987,9 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
           const byDistributor = !filters.distributor?.length || filters.distributor.includes(distributor);
           const byManager = !filters.manager?.length || filters.manager.includes(managerName);
           const byHSR = !filters.hsr?.length || filters.hsr.includes(hsr);
+          const byMerchAgency = !filters.merchAgency.length || filters.merchAgency.includes(merchAgency);
 
-          return byMapChannel && byFiltersTerritory && byDistrExecution && byManager && byDistributor && byHSR;
+          return byMapChannel && byFiltersTerritory && byDistrExecution && byManager && byDistributor && byHSR && byMerchAgency;
         });
 
         const territories = [...new Set(
@@ -830,105 +1020,117 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
     // ===== Легенды =====
 
     const applyMapFilters = (row) => {
-  if (!rowInActiveRegion(row)) return false;
+      if (!rowInActiveRegion(row)) return false;
 
-  const managerName = String(COLUMN_MAP.manager(row) || "");
-  const territoryName = String(COLUMN_MAP.territory(row) || "");
-  const distributorName = String(COLUMN_MAP.distributor(row) || "");
-  const hsrName = String(COLUMN_MAP.hsr(row) || "");
+      const managerName = String(COLUMN_MAP.manager(row) || "");
+      const territoryName = String(COLUMN_MAP.territory(row) || "");
+      const distributorName = String(COLUMN_MAP.distributor(row) || "");
+      const hsrName = String(COLUMN_MAP.hsr(row) || "");
+      const merchAgencyName = String(COLUMN_MAP.merchAgency(row) || "");
 
-  const allowedChannels =
-    CHANNEL_GROUPS[filters.mapChannel] || [filters.mapChannel];
+      const allowedChannels =
+        CHANNEL_GROUPS[filters.mapChannel] || [filters.mapChannel];
 
-  if (
-    filters.mapChannel &&
-    !allowedChannels.some(ch => managerName.startsWith(ch))
-  ) {
-    return false;
-  }
-
-  if (
-    filters.distrExecution &&
-    COLUMN_MAP.channel(row) !== filters.distrExecution
-  ) {
-    return false;
-  }
-
-  if (
-    filters.distributor?.length &&
-    !filters.distributor.includes(distributorName)
-  ) {
-    return false;
-  }
-
-  if (
-    filters.hsr?.length &&
-    !filters.hsr.includes(hsrName)
-  ) {
-    return false;
-  }
-
-  if (
-    filters.manager?.length &&
-    !filters.manager.includes(managerName)
-  ) {
-    return false;
-  }
-
-  if (
-    filters.territory?.length &&
-    !filters.territory.includes(territoryName)
-  ) {
-    return false;
-  }
-
-  return true;
-};
-
-   const generateLegends = (key, selected, group, setLegends) => {
-  if (!selectedLayers.includes(selected)) {
-    setLegends([]);
-    return;
-  }
-
-  const legends = excelData
-    .filter(applyMapFilters)
-    .map(r => {
-      switch (key) {
-        case "Distributor":
-          return COLUMN_MAP.distributor(r);
-
-        case "Region / HSR":
-          return COLUMN_MAP.hsr(r);
-
-        case "Manager":
-          return COLUMN_MAP.manager(r);
-
-        case "Territory":
-          return COLUMN_MAP.territory(r);
-
-        default:
-          return null;
+      if (
+        filters.mapChannel &&
+        !allowedChannels.some(ch => managerName.startsWith(ch))
+      ) {
+        return false;
       }
-    })
-    .filter(Boolean)
-    .filter((v, i, a) => a.indexOf(v) === i)
-    .map(title => ({
-      title,
-      color: getColor(group, title),
-    }));
 
-  setLegends(legends);
-};
+      if (
+        filters.distrExecution &&
+        COLUMN_MAP.channel(row) !== filters.distrExecution
+      ) {
+        return false;
+      }
+
+      if (
+        filters.distributor?.length &&
+        !filters.distributor.includes(distributorName)
+      ) {
+        return false;
+      }
+
+      if (
+        filters.hsr?.length &&
+        !filters.hsr.includes(hsrName)
+      ) {
+        return false;
+      }
+
+      if (
+        filters.manager?.length &&
+        !filters.manager.includes(managerName)
+      ) {
+        return false;
+      }
+
+      if (
+        filters.territory?.length &&
+        !filters.territory.includes(territoryName)
+      ) {
+        return false;
+      }
+
+      if (
+        filters.merchAgency?.length &&
+        !filters.merchAgency.includes(merchAgencyName)
+      ) {
+        return false;
+      }
+
+      return true;
+    };
+
+    const generateLegends = (key, selected, group, setLegends) => {
+      if (!selectedLayers.includes(selected)) {
+        setLegends([]);
+        return;
+      }
+
+      const legends = excelData
+        .filter(applyMapFilters)
+        .map(r => {
+          switch (key) {
+            case "Distributor":
+              return COLUMN_MAP.distributor(r);
+
+            case "Region / HSR":
+              return COLUMN_MAP.hsr(r);
+
+            case "Manager":
+              return COLUMN_MAP.manager(r);
+
+            case "Territory":
+              return COLUMN_MAP.territory(r);
+
+            case "Merch Agency":
+              return COLUMN_MAP.merchAgency(r);
+
+            default:
+              return null;
+          }
+        })
+        .filter(Boolean)
+        .filter((v, i, a) => a.indexOf(v) === i)
+        .map(title => ({
+          title,
+          color: getColor(group, title),
+        }));
+
+      setLegends(legends);
+    };
 
     // Вызовы
     generateLegends("Distributor", "DistributorLayer", "distributors", setDistributorLegends);
     generateLegends("Region / HSR", "HSRLayer", "hsr", setHSRLegends);
     generateLegends("Manager", "ManagerLayer", "managers", setManagerLegends);
     generateLegends("Territory", "TerritoryLayer", "territories", setTerritoryLegends);
+    generateLegends("Merch Agency", "MerchAgencyLayer", "merchAgencies", setMerchAgencyLegends);
 
 
-  }, [excelData, selectedRegionView, selectedLayers, filters.region, filters.hsr, filters.distributor, filters.mapChannel, filters.manager, filters.territory, filters.salesChannel, filters.generalSalesChannel, heatMapOn, changeColors, filters.distrExecution]);
+  }, [excelData, selectedRegionView, selectedLayers, filters.region, filters.hsr, filters.distributor, filters.mapChannel, filters.manager, filters.territory, filters.salesChannel, filters.generalSalesChannel, heatMapOn, changeColors, filters.distrExecution, filters.merchAgency]);
 
   const COLUMN_MAP = {
     // Названия регионов/областей
@@ -970,12 +1172,33 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
       "Территория"          // альтернативное название
     ),
 
-  
+
     channel: r => pick(
       r,
       "Channel",
       "channel"
     ),
+
+    merchAgency: r => pick(
+      r,
+      "Merch Agency",
+      "Merch agency",
+      "Merch agencys",
+      "Merch Agencys",
+      "Мерч агенства"
+    ),
+
+    countOffices: r => pick(
+      r,
+      "Count offices",
+      "Количество офисов"
+    ),
+
+    countEmployees: r => pick(
+      r,
+      "Count employees",
+      "Количество сотрудников"
+    )
 
   };
 
@@ -1002,6 +1225,7 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
       if (filters.manager?.length && !filters.manager.includes(COLUMN_MAP.manager(r))) return false;
       if (filters.territory?.length && !filters.territory.includes(COLUMN_MAP.territory(r))) return false;
       if (filters.distributor?.length && !filters.distributor.includes(COLUMN_MAP.distributor(r))) return false;
+      if (filters.merchAgency?.length && !filters.merchAgency.includes(COLUMN_MAP.merchAgency(r))) return false;
 
       return true;
     });
@@ -1045,7 +1269,10 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
       hsr: [...new Set(rows.map(r => COLUMN_MAP.hsr(r)).filter(Boolean))],
       managers: [...new Set(rows.map(r => COLUMN_MAP.manager(r)).filter(Boolean))],
       territories: [...new Set(rows.map(r => COLUMN_MAP.territory(r)).filter(Boolean))],
-      distributors: [...new Set(rows.map(r => COLUMN_MAP.distributor(r)).filter(Boolean))]
+      distributors: [...new Set(rows.map(r => COLUMN_MAP.distributor(r)).filter(Boolean))],
+      merchAgency: [...new Set(rows.map(r => COLUMN_MAP.merchAgency(r)).filter(Boolean))],
+      countOffices: [...new Set(rows.map(r => COLUMN_MAP.countOffices(r)).filter(Boolean))],
+      countEmployees: [...new Set(rows.map(r => COLUMN_MAP.countEmployees(r)).filter(Boolean))]
     };
 
     // Добавляем total и avg только если total больше 0
@@ -1066,6 +1293,7 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
   const managerList = [...new Set(excelData.map(r => COLUMN_MAP.manager(r)).filter(Boolean))];
   const territoryList = [...new Set(excelData.map(r => COLUMN_MAP.territory(r)).filter(Boolean))];
   const distributorList = [...new Set(excelData.map(r => COLUMN_MAP.distributor(r)).filter(Boolean))];
+  const merchAgencyList = [...new Set(excelData.map(r => COLUMN_MAP.merchAgency(r)).filter(Boolean))];
 
   return (
     <>
@@ -1102,8 +1330,8 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
 
 
         <ButtonThemeColor />
-        <ButtonLayers excelData={excelData} distributorLegends={distributorLegends} setDistributorLegends={setDistributorLegends} selectedLayers={selectedLayers} setSelectedLayers={setSelectedLayers} setHSRLegends={setHSRLegends} setManagerLegends={setManagerLegends} setTerritoryLegends={setTerritoryLegends} />
-        {!heatMapOn && (<MapLegends distributorLegends={distributorLegends} hsrLegends={hsrLegends} managerLegends={managerLegends} territoryLegends={territoryLegends} />)}
+        <ButtonLayers excelData={excelData} distributorLegends={distributorLegends} setDistributorLegends={setDistributorLegends} selectedLayers={selectedLayers} setSelectedLayers={setSelectedLayers} setHSRLegends={setHSRLegends} setManagerLegends={setManagerLegends} setTerritoryLegends={setTerritoryLegends} merchAgencyLegends={merchAgencyLegends} setMerchAgencyLegends={setMerchAgencyLegends} />
+        {!heatMapOn && (<MapLegends distributorLegends={distributorLegends} hsrLegends={hsrLegends} managerLegends={managerLegends} territoryLegends={territoryLegends} merchAgencyLegends={merchAgencyLegends} />)}
         {heatMapOn && (<HeatLegends min={heatLegendValues.min} avg={heatLegendValues.avg} max={heatLegendValues.max} />)}
         <RegionsEditorModal openModal={() => setRegionsEditorModalOpen(prev => !prev)} />
         <ButtonBug setHeaderRange={setHeaderRange} />
@@ -1133,6 +1361,7 @@ export default function MapLeaflet({ selectedRegion, setSelectedRegion, selected
             managers={managerList}
             territories={territoryList}
             distributors={distributorList}
+            merchAgency={merchAgencyList}
             onChangeColor={updateColor}
           />
         )}

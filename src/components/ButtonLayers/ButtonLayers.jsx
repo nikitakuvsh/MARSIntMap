@@ -9,7 +9,8 @@ export default function ButtonLayers({
     setDistributorLegends,
     setHSRLegends,
     setManagerLegends,
-    setTerritoryLegends, // новый проп
+    setTerritoryLegends,
+    setMerchAgencyLegends
 }) {
     const [listView, setListView] = useState(false);
     const colorsGenerated = useRef({});
@@ -90,54 +91,54 @@ export default function ButtonLayers({
                 setTerritoryLegends(territories.map(t => ({ title: t, color: colorsGenerated.current[t] })));
             } else setTerritoryLegends([]);
         }
+
+        // ---------- MERCH AGENCY ----------
+        if (layer === 'MerchAgencyLayer') {
+            if (!isEnabled) {
+                const merchAgencys = [...new Set(excelData.map(r => pick(r, "Merch Agency", "Merch Agencys", "Мерч агенства")).filter(Boolean))];
+
+                merchAgencys.forEach(merch => {
+                    if (!colorsGenerated.current[merch]) {
+                        colorsGenerated.current[merch] = `#${Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0')}`;
+                    }
+                });
+
+                setMerchAgencyLegends(merchAgencys.map(merch => ({ title: merch, color: colorsGenerated.current[merch] })));
+            } else setMerchAgencyLegends([]);
+        }
     };
 
     return (
         <>
-            <button
-                className="button-layers"
-                title="layers"
-                onClick={() => setListView(v => !v)}
-            >
+            <button className="button-layers" title="layers" onClick={() => setListView(v => !v)}>
                 <img className="button-layers__icon" alt="layers" src={layersIcon} />
             </button>
 
             {listView && (
                 <div className="layers__list">
                     <label className="layers__li">
-                        <input
-                            type="checkbox"
-                            checked={selectedLayers.includes('HSRLayer')}
-                            onChange={() => toggleLayer('HSRLayer')}
-                        />
+                        <input type="checkbox" checked={selectedLayers.includes('HSRLayer')} onChange={() => toggleLayer('HSRLayer')} />
                         HSR слой
                     </label>
 
                     <label className="layers__li">
-                        <input
-                            type="checkbox"
-                            checked={selectedLayers.includes('ManagerLayer')}
-                            onChange={() => toggleLayer('ManagerLayer')}
-                        />
+                        <input type="checkbox" checked={selectedLayers.includes('ManagerLayer')} onChange={() => toggleLayer('ManagerLayer')} />
                         Manager слой
                     </label>
 
                     <label className="layers__li">
-                        <input
-                            type="checkbox"
-                            checked={selectedLayers.includes('TerritoryLayer')}
-                            onChange={() => toggleLayer('TerritoryLayer')}
-                        />
+                        <input type="checkbox" checked={selectedLayers.includes('TerritoryLayer')} onChange={() => toggleLayer('TerritoryLayer')} />
                         Territory слой
                     </label>
 
                     <label className="layers__li">
-                        <input
-                            type="checkbox"
-                            checked={selectedLayers.includes('DistributorLayer')}
-                            onChange={() => toggleLayer('DistributorLayer')}
-                        />
+                        <input type="checkbox" checked={selectedLayers.includes('DistributorLayer')} onChange={() => toggleLayer('DistributorLayer')} />
                         Distr слой
+                    </label>
+
+                    <label className='layers__li'>
+                        <input type='checkbox' checked={selectedLayers.includes('MerchAgencyLayer')} onChange={() => toggleLayer('MerchAgencyLayer')} />
+                        Merch Agency слой
                     </label>
                 </div>
             )}

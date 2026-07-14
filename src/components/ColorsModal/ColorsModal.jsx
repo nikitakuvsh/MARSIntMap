@@ -6,6 +6,7 @@ const TABS = [
   { key: "managers", label: "Manager" },
   { key: "territories", label: "Territory" },
   { key: "distributors", label: "Distributors" },
+  { key: "merchAgencies", label: "Merch agency"}
 ];
 
 export default function ColorsModal({
@@ -17,6 +18,7 @@ export default function ColorsModal({
   managers = [],
   territories = [],
   distributors = [],
+  merchAgency = [],
   onChangeColor,
 }) {
   const [activeTab, setActiveTab] = useState("hsr");
@@ -39,6 +41,9 @@ export default function ColorsModal({
       case "distributors":
         return distributors;
 
+      case "merchAgencies":
+        return merchAgency
+
       default:
         return [];
     }
@@ -49,6 +54,7 @@ export default function ColorsModal({
     managers,
     territories,
     distributors,
+    merchAgency
   ]);
 
   const normalizedData = useMemo(() => {

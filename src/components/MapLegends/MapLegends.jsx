@@ -2,15 +2,16 @@ import { useState } from 'react';
 import './MapLegends.css';
 import ColorBlock from './ColorBlock';
 
-export default function MapLegends({ distributorLegends = [], hsrLegends = [], managerLegends = [], territoryLegends = [] }) {
+export default function MapLegends({ distributorLegends = [], hsrLegends = [], managerLegends = [], territoryLegends = [], merchAgencyLegends = [] }) {
     const [showAll, setShowAll] = useState(false);
     // объединяем все легенды
-    const legends = [...distributorLegends, ...hsrLegends, ...managerLegends, ...territoryLegends];
+    const legends = [...distributorLegends, ...hsrLegends, ...managerLegends, ...territoryLegends, ...merchAgencyLegends];
     if (!legends || !Array.isArray(legends) || legends.length === 0) return null;
 
     const isHSR = (item) => hsrLegends.some(h => h.title === item.title);
     const isManager = (item) => managerLegends.some(m => m.title === item.title);
     const isTerritory = (item) => territoryLegends.some(t => t.title === item.title);
+    const isMerchAgency = (item) => merchAgencyLegends.some(m => m.title === item.title);
     const showButton = legends.length > 10;
 
     return (
@@ -25,7 +26,7 @@ export default function MapLegends({ distributorLegends = [], hsrLegends = [], m
                             key={index}
                             color={item.color}
                             title={item.title}
-                            type={isHSR(item) ? "hsr" : isManager(item) ? "manager" : isTerritory(item) ? "territory" : "distributor"}
+                            type={isHSR(item) ? "hsr" : isManager(item) ? "manager" : isTerritory(item) ? "territory" : isMerchAgency(item) ? "merchAgency" : "distributor"}
                         />
                     )}
                   </div>
@@ -37,7 +38,7 @@ export default function MapLegends({ distributorLegends = [], hsrLegends = [], m
                             key={index}
                             color={item.color}
                             title={item.title}
-                            type={isHSR(item) ? "hsr" : isManager(item) ? "manager" : isTerritory(item) ? "territory" : "distributor"}
+                            type={isHSR(item) ? "hsr" : isManager(item) ? "manager" : isTerritory(item) ? "territory" : isMerchAgency(item) ? "merchAgency" : "distributor"}
                         />
                     )}
                 </div>
